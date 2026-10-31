@@ -8,24 +8,19 @@
 - Flutter 3.47.9 и Dart 3.13.7: `/Users/antonpetriev/Documents/Codex/toolchains/flutter`.
 - VS Code: расширения Flutter 3.146.0, Dart 3.146.0 и Python 2026.10.0.
 - Локальная `.vscode/settings.json` указывает путь Flutter SDK для VS Code; файл исключен из Git, потому что путь у каждого участника свой.
-- Xcode 27.2 установлен в `/Applications/Xcode.app`; первоначальная настройка и принятие лицензии Apple еще нужны.
+- Flutter добавлен в `PATH` через пользовательский `.zprofile`; проверено в новой login shell.
+- Xcode 27.2 установлен, лицензия принята, `xcode-select` указывает на полный Xcode. iOS 27.2 Simulator установлен; `flutter devices` обнаружил iPhone Duo.
+- Android Studio Rabbit 2 (2026.2.2), Android SDK, Command-line Tools и ARM64-образы Android 36/37 установлены. Лицензии приняты. AVD `USITY_API36` загрузился до `sys.boot_completed=1` и обнаружен `flutter devices`.
 - Docker Desktop установлен и запущен; `docker info` подтвердил доступ к серверу 29.5.3.
 - PyCharm и PostgreSQL.app уже установлены. Базу данных проекта будем запускать через Docker Compose после создания backend.
 
-## Что еще нужно для мобильных эмуляторов
+## Оставшаяся настройка
 
-`flutter doctor -v` сейчас показывает отсутствие Android SDK и CocoaPods. Xcode уже установлен, но до принятия лицензии Apple и выбора полного Xcode в качестве developer directory iOS toolchain не готов. При этом Flutter запускается, доступны macOS и Chrome как цели разработки.
+`flutter doctor -v` подтверждает Android toolchain. Xcode и iOS Simulator доступны, но CocoaPods пока отсутствует: системный Ruby 2.6 несовместим с актуальными зависимостями CocoaPods. Для Flutter-плагинов с нативным iOS-кодом нужен CocoaPods с современным Ruby. После установки Homebrew: `brew install cocoapods`, затем `pod --version` и `flutter doctor -v`.
 
-1. Прочитать и принять лицензию в окне Xcode. Затем выполнить команды, которые предложит `flutter doctor` (`xcode-select`, `xcodebuild -runFirstLaunch`), скачать компоненты iOS Simulator и настроить CocoaPods для нативных Flutter-плагинов.
-2. Установить Android Studio с Android SDK, Android SDK Command-line Tools, Android Emulator и системным образом ARM64; создать Android Virtual Device.
-3. Добавить `/Users/antonpetriev/Documents/Codex/toolchains/flutter/bin` в пользовательский `PATH`, чтобы команды `flutter` и `dart` работали без полного пути. В VS Code при необходимости указать этот каталог как Flutter SDK.
-4. Перезапустить терминал и VS Code, затем выполнить `flutter doctor -v` и устранить оставшиеся замечания.
+Когда начнется разработка, запустить AVD через `flutter emulators --launch USITY_API36`, а список устройств проверить `flutter devices`. Для iOS запускать симулятор через Device Hub в Xcode или `xcrun simctl`. Первую сборку на обоих эмуляторах проверить после появления исходного кода приложения.
 
-До настройки `PATH` используйте полный путь:
-
-```bash
-/Users/antonpetriev/Documents/Codex/toolchains/flutter/bin/flutter doctor -v
-```
+Эмуляторы после проверки остановлены для экономии памяти. Docker Engine оставлен включенным: в нем работает контейнер другого проекта. Окна Xcode, Android Studio, App Store и VS Code закрыты; Safari оставлен открытым.
 
 ## Проверки после появления исходного кода
 
