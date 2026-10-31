@@ -7,6 +7,7 @@
 - [Спецификация MVP](docs/product/mvp.md)
 - [Правила разработки](AGENTS.md)
 - [Окружение разработки](docs/development/environment.md)
+- [Работа команды в GitHub](docs/development/github-workflow.md)
 - [Заметки по AI-материалам курса](docs/research/ai-course-notes-ru.md)
 
 Цель: работающий MVP к 15 декабря 2026 года. Задачи ведем в GitHub Issues; изменения отправляем через небольшие коммиты и pull request.
