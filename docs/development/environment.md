@@ -11,12 +11,13 @@
 - Flutter добавлен в `PATH` через пользовательский `.zprofile`; проверено в новой login shell.
 - Xcode 27.2 установлен, лицензия принята, `xcode-select` указывает на полный Xcode. iOS 27.2 Simulator установлен; `flutter devices` обнаружил iPhone Duo.
 - Android Studio Rabbit 2 (2026.2.2), Android SDK, Command-line Tools и ARM64-образы Android 36/37 установлены. Лицензии приняты. AVD `USITY_API36` загрузился до `sys.boot_completed=1` и обнаружен `flutter devices`.
+- Homebrew 7.0.11 и CocoaPods 1.17.0 установлены; `pod` доступен в новой login shell.
 - Docker Desktop установлен и запущен; `docker info` подтвердил доступ к серверу 29.5.3.
 - PyCharm и PostgreSQL.app уже установлены. Базу данных проекта будем запускать через Docker Compose после создания backend.
 
-## Оставшаяся настройка
+## Проверка окружения
 
-`flutter doctor -v` подтверждает Android toolchain. Xcode и iOS Simulator доступны, но CocoaPods пока отсутствует: системный Ruby 2.6 несовместим с актуальными зависимостями CocoaPods. Для Flutter-плагинов с нативным iOS-кодом нужен CocoaPods с современным Ruby. После установки Homebrew: `brew install cocoapods`, затем `pod --version` и `flutter doctor -v`.
+`flutter doctor -v` завершился с `No issues found!`: Flutter, Android toolchain, Xcode, CocoaPods и сетевые ресурсы готовы. `flutter devices` обнаруживал Android 36 AVD и iPhone Duo во время их запуска.
 
 Когда начнется разработка, запустить AVD через `flutter emulators --launch USITY_API36`, а список устройств проверить `flutter devices`. Для iOS запускать симулятор через Device Hub в Xcode или `xcrun simctl`. Первую сборку на обоих эмуляторах проверить после появления исходного кода приложения.
 
