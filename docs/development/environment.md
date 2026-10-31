@@ -7,14 +7,16 @@
 - GitHub: приватный `XazukPro/USITY`, локальная ветка `main` связана с `origin/main`.
 - Flutter 3.47.9 и Dart 3.13.7: `/Users/antonpetriev/Documents/Codex/toolchains/flutter`.
 - VS Code: расширения Flutter 3.146.0, Dart 3.146.0 и Python 2026.10.0.
+- Локальная `.vscode/settings.json` указывает путь Flutter SDK для VS Code; файл исключен из Git, потому что путь у каждого участника свой.
+- Xcode 27.2 установлен в `/Applications/Xcode.app`; первоначальная настройка и принятие лицензии Apple еще нужны.
 - Docker Desktop установлен и запущен; `docker info` подтвердил доступ к серверу 29.5.3.
 - PyCharm и PostgreSQL.app уже установлены. Базу данных проекта будем запускать через Docker Compose после создания backend.
 
 ## Что еще нужно для мобильных эмуляторов
 
-`flutter doctor -v` сейчас показывает отсутствие Android SDK, полной Xcode и CocoaPods. При этом Flutter запускается, доступны macOS и Chrome как цели разработки.
+`flutter doctor -v` сейчас показывает отсутствие Android SDK и CocoaPods. Xcode уже установлен, но до принятия лицензии Apple и выбора полного Xcode в качестве developer directory iOS toolchain не готов. При этом Flutter запускается, доступны macOS и Chrome как цели разработки.
 
-1. Установить полную Xcode из App Store и компоненты iOS Simulator. После установки выполнить команды, которые предложит `flutter doctor` (`xcode-select`, `xcodebuild -runFirstLaunch`), и настроить CocoaPods для нативных Flutter-плагинов.
+1. Прочитать и принять лицензию в окне Xcode. Затем выполнить команды, которые предложит `flutter doctor` (`xcode-select`, `xcodebuild -runFirstLaunch`), скачать компоненты iOS Simulator и настроить CocoaPods для нативных Flutter-плагинов.
 2. Установить Android Studio с Android SDK, Android SDK Command-line Tools, Android Emulator и системным образом ARM64; создать Android Virtual Device.
 3. Добавить `/Users/antonpetriev/Documents/Codex/toolchains/flutter/bin` в пользовательский `PATH`, чтобы команды `flutter` и `dart` работали без полного пути. В VS Code при необходимости указать этот каталог как Flutter SDK.
 4. Перезапустить терминал и VS Code, затем выполнить `flutter doctor -v` и устранить оставшиеся замечания.
