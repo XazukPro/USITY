@@ -26,27 +26,43 @@ class ChatProviderTests(unittest.TestCase):
             model="example-model",
             api_key="test-key",
         )
-        with patch("app.agents.providers.urlopen", return_value=Response({"choices": [{"message": {"content": '{"kind":"none"}'}}]})) as send:
+        with patch(
+            "app.agents.providers.urlopen",
+            return_value=Response(
+                {"choices": [{"message": {"content": '{"kind":"none"}'}}]}
+            ),
+        ) as send:
             result = provider.complete("system", '{"messages":[]}')
         self.assertEqual(result, '{"kind":"none"}')
         request = send.call_args.args[0]
         body = json.loads(request.data)
         self.assertEqual(body["model"], "example-model")
-        self.assertEqual(body["messages"], [
-            {"role": "system", "content": "system"},
-            {"role": "user", "content": '{"messages":[]}'},
-        ])
+        self.assertEqual(
+            body["messages"],
+            [
+                {"role": "system", "content": "system"},
+                {"role": "user", "content": '{"messages":[]}'},
+            ],
+        )
         self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
 
     def test_rejects_plain_http_when_key_is_present(self):
         with self.assertRaisesRegex(ValueError, "HTTPS"):
-            ChatCompletionsProvider("http://llm.example.test/v1/chat/completions", "model", "secret")
+            ChatCompletionsProvider(
+                "http://llm.example.test/v1/chat/completions", "model", "secret"
+            )
 
     def test_rejects_missing_choice_without_leaking_key(self):
-        provider = ChatCompletionsProvider("https://llm.example.test/v1/chat/completions", "model", "secret")
-        with patch("app.agents.providers.urlopen", return_value=Response({"choices": []})):
-            with self.assertRaises(ModelProviderError) as caught:
-                provider.complete("system", "data")
+        provider = ChatCompletionsProvider(
+            "https://llm.example.test/v1/chat/completions", "model", "secret"
+        )
+        with (
+            patch(
+                "app.agents.providers.urlopen", return_value=Response({"choices": []})
+            ),
+            self.assertRaises(ModelProviderError) as caught,
+        ):
+            provider.complete("system", "data")
         self.assertNotIn("secret", str(caught.exception))
 
 

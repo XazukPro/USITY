@@ -11,7 +11,9 @@ class ModelProviderError(RuntimeError):
 
 
 class ChatCompletionsProvider:
-    def __init__(self, endpoint: str, model: str, api_key: str, timeout_seconds: float = 20.0):
+    def __init__(
+        self, endpoint: str, model: str, api_key: str, timeout_seconds: float = 20.0
+    ):
         parsed = urlparse(endpoint)
         if parsed.scheme != "https" or not parsed.netloc:
             raise ValueError("LLM endpoint must use HTTPS")
@@ -33,7 +35,10 @@ class ChatCompletionsProvider:
         request = Request(
             self.endpoint,
             data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
             method="POST",
         )
         try:
@@ -42,7 +47,9 @@ class ChatCompletionsProvider:
         except HTTPError as exc:
             raise ModelProviderError(f"LLM HTTP status {exc.code}") from None
         except (URLError, TimeoutError, OSError, ValueError) as exc:
-            raise ModelProviderError(f"LLM request failed: {type(exc).__name__}") from None
+            raise ModelProviderError(
+                f"LLM request failed: {type(exc).__name__}"
+            ) from None
         try:
             content = body["choices"][0]["message"]["content"]
         except (TypeError, KeyError, IndexError) as exc:

@@ -1,8 +1,8 @@
 """Run Anton's agent on synthetic messages with a configured LLM endpoint."""
 
-from dataclasses import asdict
 import json
 import os
+from dataclasses import asdict
 
 from app.agents.homework import EventBundle, Message, detect_homework
 from app.agents.providers import ChatCompletionsProvider

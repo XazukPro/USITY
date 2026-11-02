@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Protocol
 
 
@@ -64,7 +64,12 @@ def detect_homework(bundle: EventBundle, llm: LlmProvider) -> AgentProposal | No
     text = response.get("text")
     source_ids = response.get("source_ids")
     uncertain = response.get("uncertain")
-    if kind == "none" and text is None and source_ids == [] and isinstance(uncertain, bool):
+    if (
+        kind == "none"
+        and text is None
+        and source_ids == []
+        and isinstance(uncertain, bool)
+    ):
         return None
     if kind != "new_homework" or not isinstance(text, str) or not text.strip():
         raise ProposalError("Недопустимые kind/text")
@@ -74,7 +79,10 @@ def detect_homework(bundle: EventBundle, llm: LlmProvider) -> AgentProposal | No
     if (
         not isinstance(source_ids, list)
         or not source_ids
-        or any(type(source_id) is not int or source_id not in valid_ids for source_id in source_ids)
+        or any(
+            type(source_id) is not int or source_id not in valid_ids
+            for source_id in source_ids
+        )
         or len(set(source_ids)) != len(source_ids)
     ):
         raise ProposalError("Недопустимые source_ids")
