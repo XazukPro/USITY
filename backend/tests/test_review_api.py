@@ -323,3 +323,30 @@ def test_concurrent_completion_cannot_replace_newer_revision(setup):
     finally:
         event.remove(Engine, "before_cursor_execute", before_upsert)
     assert assignments(s) == []
+
+
+def test_session_profile_drives_client_permissions(setup):
+    s = setup
+    assert s["client"].get("/me").status_code == 401
+    profile = s["client"].get("/me", headers=headers(s, "student")).json()
+    assert profile == {
+        "user_id": s["users"]["student"],
+        "group_id": s["group"],
+        "role": "student",
+    }
+
+
+def test_processed_draft_reports_conflict_even_after_lesson_started(setup):
+    s = setup
+    result = decide(s).json()
+    with s["engine"].begin() as db:
+        from app.models import Lesson
+
+        db.execute(
+            Lesson.__table__.update()
+            .where(Lesson.id == s["lesson"])
+            .values(starts_at=datetime.now(UTC) - timedelta(hours=1))
+        )
+    conflict = decide(s)
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"]["assignment_id"] == result["assignment_id"]

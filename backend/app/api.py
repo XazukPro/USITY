@@ -39,6 +39,14 @@ def create_app(database_url):
 
     Member = Annotated[object, Depends(current_member)]
 
+    @app.get("/me")
+    def profile(member: Member):
+        return {
+            "user_id": member.user_id,
+            "group_id": member.group_id,
+            "role": member.role,
+        }
+
     @app.get("/health")
     def health():
         return {"status": "ok"}
@@ -92,16 +100,6 @@ def create_app(database_url):
         group_id: str, draft_id: str, body: DecisionInput, db: DB, member: Member
     ):
         require_group(member, group_id, admin=True)
-        if body.action == "approve":
-            lesson = db.scalar(
-                select(Lesson)
-                .where(Lesson.id == body.lesson_id, Lesson.group_id == group_id)
-                .with_for_update()
-            )
-            if lesson is None:
-                raise HTTPException(404, "Пара не найдена")
-            if lesson.starts_at <= utc_now():
-                raise HTTPException(422, "Выберите новый срок: эта пара уже началась")
         status = "approved" if body.action == "approve" else "rejected"
         result = db.execute(
             update(Draft)
@@ -139,6 +137,16 @@ def create_app(database_url):
                     "assignment_id": published_id,
                 },
             )
+        if body.action == "approve":
+            lesson = db.scalar(
+                select(Lesson)
+                .where(Lesson.id == body.lesson_id, Lesson.group_id == group_id)
+                .with_for_update()
+            )
+            if lesson is None:
+                raise HTTPException(404, "Пара не найдена")
+            if lesson.starts_at <= utc_now():
+                raise HTTPException(422, "Выберите новый срок: эта пара уже началась")
         assignment_id = None
         if body.action == "approve":
             assignment = Assignment(
