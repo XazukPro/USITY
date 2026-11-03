@@ -64,6 +64,29 @@ class TelegramIntegration(Base):
     )
     chat_id: Mapped[str] = mapped_column(String(100))
     topic_id: Mapped[str] = mapped_column(String(100))
+    owner_telegram_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+
+class TelegramConnectCode(Base):
+    __tablename__ = "telegram_connect_codes"
+    group_id: Mapped[str] = mapped_column(
+        ForeignKey("study_groups.id"), primary_key=True
+    )
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class TelegramInbox(Base):
+    __tablename__ = "telegram_inbox"
+    chat_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    topic_id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    message_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    group_id: Mapped[str] = mapped_column(ForeignKey("study_groups.id"), index=True)
+    text: Mapped[str] = mapped_column(Text)
+    sent_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    received_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+    event_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    processed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
 class IngestedEvent(Base):
