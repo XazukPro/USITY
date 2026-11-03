@@ -36,19 +36,35 @@
 
 ## Запуск
 
-Python 3.9+; сторонние Python-зависимости не требуются. Для реального вызова
-модели установите `OPENAI_API_KEY` и `OPENAI_MODEL` в окружении и передайте
-JSON-файл со входом на stdin (синтетический пример — `example_event.json`):
+Python 3.9+; сторонние Python-зависимости не требуются. Создайте проект
+GigaChat API для физического лица и получите **Authorization Key** в настройках
+API проекта. Сохраните ключ в переменной окружения `GIGACHAT_CREDENTIALS`;
+`GIGACHAT_MODEL` необязательна, по умолчанию `GigaChat-2`. Значения переменных
+описаны в `.env.example`. Пример ввода ключа в текущем окне zsh без отображения:
+
+```bash
+read -s 'GIGACHAT_CREDENTIALS?Authorization Key: '
+export GIGACHAT_CREDENTIALS
+export GIGACHAT_MODEL='GigaChat-2'
+```
+
+Для TLS нужен корневой сертификат НУЦ Минцифры. Установите его в системное
+хранилище или задайте `GIGACHAT_CA_BUNDLE_FILE` с путём к PEM-файлу. Проверка
+сертификата не отключается. Ключ, временный токен и PEM-файл не коммитьте.
+
+Передайте JSON-файл со входом на stdin (синтетический пример —
+`example_event.json`):
 
 ```bash
 python3 -m backend.agents.schedule_binding < backend/agents/schedule_binding/example_event.json
 ```
 
-Адаптер использует OpenAI Chat Completions со строгой JSON-схемой, согласно
-[документации API](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create).
-Другой провайдер может реализовать интерфейс `SemanticModel.extract`.
-Поддержку схемы конкретной моделью и стоимость нужно проверить до эксплуатации.
-Не помещайте ключ и реальные сообщения в Git.
+Адаптер обменивает Authorization Key на токен GigaChat, повторно использует его
+до истечения срока и отправляет запрос к API v1 со структурированным выводом.
+Форматы взяты из [документации авторизации](https://developers.sber.ru/docs/ru/gigachat/api/reference/rest/gigachat-api)
+и [структурированного вывода](https://developers.sber.ru/docs/ru/gigachat/guides/structured-output).
+Другой провайдер может реализовать интерфейс `SemanticModel.extract`. Совместимость
+конкретной модели и качество на реальных сообщениях нужно проверить отдельно.
 
 ## Проверка и оценка
 

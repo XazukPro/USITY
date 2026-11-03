@@ -59,7 +59,7 @@ class ScheduleAgentTests(unittest.TestCase):
         self.assertEqual(result["status"], "proposed")
         self.assertEqual(result["subject_id"], "math")
         self.assertEqual(result["lesson_id"], "monday-math:2026-09-07")
-        self.assertEqual(result["prompt_version"], "schedule-binding-v1")
+        self.assertEqual(result["prompt_version"], "schedule-binding-gigachat-v1")
 
     def test_even_week_and_cancellation(self):
         data = bundle()

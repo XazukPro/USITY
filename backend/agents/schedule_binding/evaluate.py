@@ -7,7 +7,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from .agent import bind_schedule
-from .provider import PROMPT_VERSION, OpenAIChatModel
+from .provider import PROMPT_VERSION, GigaChatModel
 
 
 NOW = datetime(2026, 9, 7, 9, 0, tzinfo=ZoneInfo("Europe/Moscow"))
@@ -54,11 +54,11 @@ def cases():
 
 
 def main():
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    model_name = os.environ.get("OPENAI_MODEL", "")
-    if not api_key or not model_name:
-        raise SystemExit("Set OPENAI_API_KEY and OPENAI_MODEL in the environment")
-    model = OpenAIChatModel(api_key, model_name)
+    credentials = os.environ.get("GIGACHAT_CREDENTIALS", "")
+    model_name = os.environ.get("GIGACHAT_MODEL", "GigaChat-2")
+    if not credentials:
+        raise SystemExit("Set GIGACHAT_CREDENTIALS in the environment")
+    model = GigaChatModel(credentials, model_name, os.environ.get("GIGACHAT_CA_BUNDLE_FILE"))
     rows = []
     for name, item, expected_subject, expected_lesson in cases():
         proposal = bind_schedule(item, model, NOW)
