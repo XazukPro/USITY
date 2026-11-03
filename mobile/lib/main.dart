@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+
+import 'data/usity_api.dart';
+import 'features/schedule/live_home_page.dart';
 
 import 'features/schedule/schedule_page.dart';
 
@@ -19,7 +23,7 @@ class UsityApp extends StatelessWidget {
         subject: 'Математика',
         teacher: 'И. А. Иванова',
         location: 'Аудитория 401',
-        homework: const ['Решить номера 4 и 5'],
+        homework: const [HomeworkItem(text: 'Решить номера 4 и 5')],
       ),
       LessonOccurrence(
         id: 'demo-python',
@@ -29,7 +33,9 @@ class UsityApp extends StatelessWidget {
         subject: 'Основы программирования',
         teacher: 'Е. А. Роганов',
         location: 'Аудитория 205',
-        homework: const ['Подготовить практическую работу по спискам'],
+        homework: const [
+          HomeworkItem(text: 'Подготовить практическую работу по спискам'),
+        ],
       ),
     ];
     const seed = Color(0xFF087F79);
@@ -48,7 +54,23 @@ class UsityApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: HomePage(lessons: lessons, today: today),
+      home:
+          kDebugMode &&
+              const String.fromEnvironment('USITY_SESSION_TOKEN').isNotEmpty
+          ? LiveHomePage(
+              api: UsityApi(
+                baseUrl: const String.fromEnvironment(
+                  'USITY_API_URL',
+                  defaultValue: 'http://127.0.0.1:8000',
+                ),
+                token: const String.fromEnvironment('USITY_SESSION_TOKEN'),
+              ),
+            )
+          : Banner(
+              message: 'Демо',
+              location: BannerLocation.topEnd,
+              child: HomePage(lessons: lessons, today: today),
+            ),
     );
   }
 }

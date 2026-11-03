@@ -17,7 +17,7 @@ void main() {
               subject: 'Математика',
               teacher: 'И. А. Иванова',
               location: 'Аудитория 401',
-              homework: const ['Решить номера 4 и 5'],
+              homework: const [HomeworkItem(text: 'Решить номера 4 и 5')],
             ),
           ],
         ),
@@ -71,5 +71,30 @@ void main() {
 
     expect(find.text('История'), findsOneWidget);
     expect(find.text('Математика'), findsNothing);
+  });
+
+  testWidgets('next week exposes later homework', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SchedulePage(
+          today: DateTime(2026, 11, 2),
+          lessons: [
+            LessonOccurrence(
+              id: 'next',
+              date: DateTime(2026, 11, 9),
+              startTime: '10:00',
+              endTime: '11:00',
+              subject: 'Следующая математика',
+              teacher: '',
+              location: '',
+              homework: const [HomeworkItem(text: 'ДЗ на следующую неделю')],
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Следующая неделя'));
+    await tester.pumpAndSettle();
+    expect(find.text('ДЗ на следующую неделю'), findsOneWidget);
   });
 }

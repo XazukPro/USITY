@@ -1,31 +1,22 @@
 import 'package:flutter/material.dart';
 
-class LessonOccurrence {
-  const LessonOccurrence({
-    required this.id,
-    required this.date,
-    required this.startTime,
-    required this.endTime,
-    required this.subject,
-    required this.teacher,
-    required this.location,
-    required this.homework,
-  });
-
-  final String id;
-  final DateTime date;
-  final String startTime;
-  final String endTime;
-  final String subject;
-  final String teacher;
-  final String location;
-  final List<String> homework;
-}
+import '../../domain/schedule.dart';
+export '../../domain/schedule.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({super.key, required this.today, required this.lessons});
+  const SchedulePage({
+    super.key,
+    required this.today,
+    required this.lessons,
+    this.actions = const [],
+    this.onComplete,
+    this.onDaySelected,
+  });
+  final ValueChanged<DateTime>? onDaySelected;
   final DateTime today;
   final List<LessonOccurrence> lessons;
+  final List<Widget> actions;
+  final void Function(HomeworkItem)? onComplete;
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
@@ -48,6 +39,14 @@ class _SchedulePageState extends State<SchedulePage> {
     'декабря',
   ];
   late DateTime selectedDay = DateUtils.dateOnly(widget.today);
+  void selectDay(DateTime day) {
+    setState(() => selectedDay = DateUtils.dateOnly(day));
+    widget.onDaySelected?.call(selectedDay);
+  }
+
+  void changeWeek(int offset) => selectDay(
+    DateTime(selectedDay.year, selectedDay.month, selectedDay.day + offset * 7),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +75,7 @@ class _SchedulePageState extends State<SchedulePage> {
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  Icon(Icons.calendar_month_outlined, color: colors.primary),
+                  ...widget.actions,
                 ],
               ),
             ),
@@ -100,7 +99,7 @@ class _SchedulePageState extends State<SchedulePage> {
                     child: InkWell(
                       key: Key(key),
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () => setState(() => selectedDay = day),
+                      onTap: () => selectDay(day),
                       child: Container(
                         width: 48,
                         decoration: BoxDecoration(
@@ -142,10 +141,26 @@ class _SchedulePageState extends State<SchedulePage> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: Text(
-                '${weekdays[selectedDay.weekday - 1]}, ${selectedDay.day} ${months[selectedDay.month - 1]}',
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${weekdays[selectedDay.weekday - 1]}, ${selectedDay.day} ${months[selectedDay.month - 1]} ${selectedDay.year}',
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Предыдущая неделя',
+                    onPressed: () => changeWeek(-1),
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  IconButton(
+                    tooltip: 'Следующая неделя',
+                    onPressed: () => changeWeek(1),
+                    icon: const Icon(Icons.chevron_right),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -160,8 +175,10 @@ class _SchedulePageState extends State<SchedulePage> {
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                       itemCount: dayLessons.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) =>
-                          LessonCard(lesson: dayLessons[index]),
+                      itemBuilder: (context, index) => LessonCard(
+                        lesson: dayLessons[index],
+                        onComplete: widget.onComplete,
+                      ),
                     ),
             ),
           ],
@@ -172,8 +189,9 @@ class _SchedulePageState extends State<SchedulePage> {
 }
 
 class LessonCard extends StatelessWidget {
-  const LessonCard({super.key, required this.lesson});
+  const LessonCard({super.key, required this.lesson, this.onComplete});
   final LessonOccurrence lesson;
+  final void Function(HomeworkItem)? onComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -229,9 +247,21 @@ class LessonCard extends StatelessWidget {
               for (final item in lesson.homework)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    item,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  child: Row(
+                    children: [
+                      if (onComplete != null)
+                        IconButton(
+                          tooltip: 'Выполнить задание',
+                          onPressed: () => onComplete!(item),
+                          icon: const Icon(Icons.radio_button_unchecked),
+                        ),
+                      Expanded(
+                        child: Text(
+                          item.text,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
