@@ -1,0 +1,1 @@
+"""Schedule binding regression tests."""
