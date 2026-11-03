@@ -206,7 +206,7 @@ def bind_schedule(bundle: dict, model: SemanticModel, now: datetime) -> dict:
         "agent_id": AGENT_ID, "group_id": bundle["group_id"],
         "proposal_type": "schedule_binding", "status": "needs_review",
         "source_message_ids": [m["id"] for m in messages], "subject_id": None,
-        "candidate_subject_ids": [], "subgroup_ids": None, "lesson_id": None,
+        "candidate_subject_ids": [], "subgroup_ids": None, "lesson_id": None, "due_at": None,
         "candidate_lessons": [], "uncertainty": [], "prompt_version": PROMPT_VERSION,
         "model_version": model.model_name, "model_response": None,
         "source_context": [dict(m) for m in messages],
@@ -266,6 +266,9 @@ def bind_schedule(bundle: dict, model: SemanticModel, now: datetime) -> dict:
     result["candidate_lessons"] = [lesson for lesson in lessons if (lesson["date"], lesson["start_time"]) == first_slot][:10]
     if len(result["candidate_lessons"]) == 1:
         result["lesson_id"] = lessons[0]["id"]
+        result["due_at"] = datetime.combine(
+            _iso_date(lessons[0]["date"]), _iso_time(lessons[0]["start_time"]), local_now.tzinfo
+        ).isoformat()
         result["status"] = "proposed"
     else:
         result["uncertainty"].append("multiple_matching_lessons")

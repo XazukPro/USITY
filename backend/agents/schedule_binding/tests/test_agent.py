@@ -71,6 +71,25 @@ class ScheduleAgentTests(unittest.TestCase):
         result = bind_schedule(data, FixedModel(subject_mention="матан"), NOW)
         self.assertEqual(result["lesson_id"], "monday-math:2026-09-28")
 
+    def test_two_lessons_same_day_uses_earliest_future_slot(self):
+        data = bundle()
+        data["messages"][0]["text"] = "Матан к следующей паре"
+        data["patterns"].append({
+            "id": "monday-math-late", "subject_id": "math", "weekday": 0,
+            "start_time": "15:00", "parity": "all", "subgroup_ids": [],
+        })
+        result = bind_schedule(data, FixedModel(subject_mention="Матан"), NOW)
+        self.assertEqual(result["lesson_id"], "monday-math:2026-09-07")
+        self.assertEqual(result["due_at"], "2026-09-07T11:00:00+03:00")
+
+    def test_undefined_deadline_needs_admin(self):
+        data = bundle()
+        data["messages"][0]["text"] = "По матан решить задачу"
+        result = bind_schedule(data, FixedModel(subject_mention="матан", deadline_kind="none"), NOW)
+        self.assertIsNone(result["lesson_id"])
+        self.assertIsNone(result["due_at"])
+        self.assertIn("deadline_not_specified", result["uncertainty"])
+
     def test_moved_lesson_and_extra_lesson(self):
         data = bundle()
         data["messages"][0]["text"] = "По матан к следующей паре"
