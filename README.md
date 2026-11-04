@@ -8,5 +8,6 @@
 - [Правила разработки](AGENTS.md)
 - [Окружение разработки](docs/development/environment.md)
 - [Заметки по AI-материалам курса](docs/research/ai-course-notes-ru.md)
+- [Лицензия MIT](LICENSE)
 
 Цель: работающий MVP к 15 декабря 2026 года. Задачи ведем в GitHub Issues; изменения отправляем через небольшие коммиты и pull request.
