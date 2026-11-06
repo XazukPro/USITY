@@ -1,4 +1,4 @@
-"""Schedule binding agent. No other agent is required to call it."""
+"""Агент привязки к расписанию, запускаемый без других агентов."""
 
 from .agent import bind_schedule
 
