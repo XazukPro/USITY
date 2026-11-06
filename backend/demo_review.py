@@ -33,7 +33,7 @@ class FixtureProvider:
         )
 
 
-def prepare(url):
+def prepare(url, fixture=True):
     engine = make_engine(url)
     Base.metadata.create_all(engine)
     group_id = str(uuid4())
@@ -51,7 +51,7 @@ def prepare(url):
                 Membership(
                     user_id=user_id,
                     group_id=group_id,
-                    role="admin" if role == "admin" else "student",
+                    role="owner" if role == "admin" else "student",
                 )
             )
             db.flush()
@@ -62,7 +62,8 @@ def prepare(url):
                     expires_at=now + timedelta(hours=12),
                 )
             )
-        db.add(TelegramIntegration(group_id=group_id, chat_id=chat_id, topic_id="42"))
+        if fixture:
+            db.add(TelegramIntegration(group_id=group_id, chat_id=chat_id, topic_id="42"))
     with TestClient(create_app(url)) as client:
         response = client.post(
             f"/groups/{group_id}/lessons",
@@ -77,17 +78,24 @@ def prepare(url):
         )
         response.raise_for_status()
         lesson_id = response.json()["id"]
-    bundle = EventBundle(
-        group_id,
-        "42",
-        (
-            Message(1, "К следующей математике решить", now.isoformat()),
-            Message(2, "номера 4 и 5", now.isoformat()),
-        ),
-    )
-    draft_id = ingest_homework(
-        engine, str(uuid4()), chat_id, bundle, FixtureProvider(), "synthetic-fixture-v1"
-    )
+    draft_id = None
+    if fixture:
+        bundle = EventBundle(
+            group_id,
+            "42",
+            (
+                Message(1, "К следующей математике решить", now.isoformat()),
+                Message(2, "номера 4 и 5", now.isoformat()),
+            ),
+        )
+        draft_id = ingest_homework(
+            engine,
+            str(uuid4()),
+            chat_id,
+            bundle,
+            FixtureProvider(),
+            "synthetic-fixture-v1",
+        )
     engine.dispose()
     return {
         "group_id": group_id,
@@ -144,9 +152,14 @@ def main():
         metavar="LOCAL_SESSION_FILE",
         help="Create local synthetic demo and write temporary sessions to a NEW ignored .env.* file",
     )
+    parser.add_argument(
+        "--prepare-bot",
+        metavar="LOCAL_SESSION_FILE",
+        help="Create a local group for live Telegram intake, without a fixture draft",
+    )
     args = parser.parse_args()
-    if args.prepare:
-        path = Path(args.prepare)
+    if args.prepare or args.prepare_bot:
+        path = Path(args.prepare or args.prepare_bot)
         if not path.name.startswith(".env.") or path.name == ".env.example":
             parser.error("Используйте игнорируемый файл .env.*, кроме .env.example")
         url = os.environ.get("USITY_DATABASE_URL")
@@ -155,7 +168,12 @@ def main():
         # Exclusive creation prevents accidentally overwriting existing credentials.
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "w") as target:
-            json.dump(prepare(url), target, ensure_ascii=False, indent=2)
+            json.dump(
+                prepare(url, fixture=not bool(args.prepare_bot)),
+                target,
+                ensure_ascii=False,
+                indent=2,
+            )
         print(f"Учебный стенд подготовлен. Временные сессии (12 часов): {path}")
     else:
         with TemporaryDirectory() as directory:
