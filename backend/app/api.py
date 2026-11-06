@@ -9,6 +9,7 @@ from app.auth import authenticate, require_group
 from app.db import make_engine
 from app.models import Assignment, Completion, Draft, Lesson, utc_now
 from app.schemas import CompletionInput, DecisionInput, LessonInput
+from app.telegram import ConnectionDenied, connection_status, issue_connect_code
 
 
 def lesson_json(lesson):
@@ -50,6 +51,20 @@ def create_app(database_url):
     @app.get("/health")
     def health():
         return {"status": "ok"}
+
+    @app.get("/groups/{group_id}/telegram")
+    def telegram_status(group_id: str, db: DB, member: Member):
+        require_group(member, group_id, admin=True)
+        return connection_status(db, group_id)
+
+    @app.post("/groups/{group_id}/telegram/connect-code")
+    def telegram_connect_code(group_id: str, db: DB, member: Member):
+        require_group(member, group_id)
+        try:
+            code, expires_at = issue_connect_code(db, member)
+        except ConnectionDenied as exc:
+            raise HTTPException(403, str(exc)) from exc
+        return {"code": code, "expires_at": expires_at}
 
     @app.get("/groups/{group_id}/lessons")
     def lessons(group_id: str, db: DB, member: Member):
