@@ -1,4 +1,4 @@
-"""Run the schedule agent independently: JSON EventBundle on stdin."""
+"""Автономный запуск агента расписания: JSON EventBundle читается из stdin."""
 
 import json
 import os

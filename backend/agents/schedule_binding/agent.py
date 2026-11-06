@@ -1,7 +1,8 @@
-"""Validate semantic extraction and bind it to a published schedule.
+"""Проверяет извлечённые моделью данные и привязывает их к опубликованному расписанию.
 
-Input is a JSON-compatible EventBundle slice. The caller supplies only the connected
-Telegram topic and the group's published schedule. This module never writes data.
+На вход подаётся JSON-совместимая часть EventBundle. Вызывающий код передаёт
+только подключённую тему Telegram и опубликованное расписание группы.
+Этот модуль не изменяет данные.
 """
 
 import re
@@ -142,7 +143,7 @@ def _subgroups(bundle: dict, mentions: Optional[List[str]], evidence: str, subje
     if mentions is None:
         return None, []
     if not mentions:
-        return [], []  # Explicitly all subgroups.
+        return [], []  # Явно указаны все подгруппы.
     catalog = next(s for s in bundle["subjects"] if s["id"] == subject_id).get("subgroups", [])
     found, unknown = set(), []
     for mention in mentions:
@@ -191,7 +192,7 @@ def _occurrences(bundle: dict, from_date: date, through_date: date) -> List[dict
 
 
 def bind_schedule(bundle: dict, model: SemanticModel, now: datetime) -> dict:
-    """Produce a review-only AgentProposal from an EventBundle slice."""
+    """Создаёт предложение AgentProposal для проверки администратором."""
     _validate_bundle(bundle)
     if now.tzinfo is None:
         raise ValueError("now must include a timezone")

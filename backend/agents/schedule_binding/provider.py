@@ -1,4 +1,4 @@
-"""GigaChat semantic extraction adapter for the independent schedule agent."""
+"""Адаптер GigaChat для извлечения данных агентом расписания."""
 
 import json
 import ssl
@@ -41,11 +41,11 @@ class SemanticModel(Protocol):
     model_name: str
 
     def extract(self, context: dict) -> str:
-        """Return raw JSON text; the agent validates its content."""
+        """Возвращает исходный JSON-текст; его содержимое проверяет агент."""
 
 
 class ProviderError(OSError):
-    """Provider failure without credentials or message text in the exception."""
+    """Ошибка провайдера без ключа и текста сообщения в исключении."""
 
 
 class ProviderHttpError(ProviderError):
@@ -55,7 +55,7 @@ class ProviderHttpError(ProviderError):
 
 
 class GigaChatModel:
-    """Personal API adapter with cached OAuth token and verified TLS."""
+    """Адаптер для физлиц с кешированием токена OAuth и проверкой TLS."""
 
     def __init__(
         self,
