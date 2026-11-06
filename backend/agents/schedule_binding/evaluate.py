@@ -1,4 +1,4 @@
-"""Small synthetic holdout set for a live, independent model evaluation."""
+"""Небольшой набор синтетических примеров для независимой оценки модели."""
 
 import json
 import os

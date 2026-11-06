@@ -1,1 +1,1 @@
-"""USITY backend modules."""
+"""Модули серверной части USITY."""

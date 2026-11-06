@@ -1,1 +1,1 @@
-"""Independent agents used by the backend."""
+"""Независимые агенты серверной части."""
