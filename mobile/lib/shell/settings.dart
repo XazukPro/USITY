@@ -5,6 +5,9 @@ import '../theme/tokens.dart';
 import '../design/gallery.dart';
 import '../design/catalog_card.dart';
 import '../domain/day_plan.dart';
+import '../domain/group_setup.dart';
+
+import 'package:flutter/services.dart';
 
 const themeLabels = {
   ThemeMode.system: 'Как в системе',
@@ -37,9 +40,13 @@ class SettingsPage extends StatelessWidget {
     this.pending = 0,
     this.plan,
     this.onExit,
+    this.group,
+    this.onCreateGroup,
   });
   final VoidCallback? onReview, onExit;
   final DemoPlan? plan;
+  final GroupSetup? group;
+  final VoidCallback? onCreateGroup;
   final int pending;
 
   Future<void> _theme(BuildContext context, ThemePreference? pref) async {
@@ -82,11 +89,7 @@ class SettingsPage extends StatelessWidget {
                 Wrap(
                   spacing: Metrics.space2,
                   children: [
-                    for (final group in {
-                      for (final l in plan.lessons)
-                        if (l.subject == subject && l.subgroup != null)
-                          l.subgroup!,
-                    })
+                    for (final group in plan.availableSubgroups[subject]!)
                       ChoiceChip(
                         label: Text('Подгруппа $group'),
                         selected: plan.subgroupChoices[subject] == group,
@@ -214,12 +217,16 @@ class SettingsPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isDemo ? 'Алексей Петров' : 'Учебный профиль',
+                      isDemo
+                          ? (this.group == null ? 'Алексей Петров' : 'Вы')
+                          : 'Учебный профиль',
                       style: TypeScale.heading,
                     ),
                     Text(
                       isDemo
-                          ? 'Студент · демогруппа'
+                          ? (this.group == null
+                                ? 'Студент · демогруппа'
+                                : 'Староста · 1 участник')
                           : onReview == null
                           ? 'Студент'
                           : 'Администратор',
@@ -232,6 +239,32 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Metrics.space4),
+        if (this.group case final owner?)
+          group([
+            ListTile(
+              leading: const Icon(Icons.send_outlined),
+              title: const Text('Telegram'),
+              subtitle: Text(
+                owner.telegramDemoConnected
+                    ? 'Демо · подключено'
+                    : 'Подключение пропущено',
+              ),
+            ),
+            row(
+              Icons.link,
+              'Пригласить в группу',
+              tap: () async {
+                await Clipboard.setData(ClipboardData(text: owner.invite));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Демонстрационная ссылка скопирована'),
+                    ),
+                  );
+                }
+              },
+            ),
+          ]),
         if (onReview != null)
           group([
             row(
@@ -275,6 +308,10 @@ class SettingsPage extends StatelessWidget {
               danger: true,
               tap: () => _exit(context),
             ),
+          ]),
+        if (onCreateGroup != null)
+          group([
+            row(Icons.group_add_outlined, 'Демо старосты', tap: onCreateGroup),
           ]),
         if (kDebugMode)
           group([

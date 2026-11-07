@@ -15,6 +15,8 @@ import 'domain/day_plan.dart';
 import 'features/schedule/planner_page.dart';
 import 'features/schedule/demo_tasks.dart';
 import 'features/materials/materials_page.dart';
+import 'domain/group_setup.dart';
+import 'features/onboarding/owner_wizard.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -102,7 +104,8 @@ class _UsityAppState extends State<UsityApp> {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.today, this.onExit});
+  const HomePage({super.key, required this.today, this.onExit, this.group});
+  final GroupSetup? group;
   final VoidCallback? onExit;
   final DateTime today;
 
@@ -112,7 +115,29 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedTab = 0;
-  late final plan = samplePlan(widget.today);
+  late final plan = widget.group?.createPlan() ?? samplePlan(widget.today);
+  Future<void> createGroup() async {
+    final group = await Navigator.push<GroupSetup>(
+      context,
+      MaterialPageRoute(builder: (_) => OwnerWizard(today: widget.today)),
+    );
+    if (!mounted || group == null) return;
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (c) => Banner(
+          message: 'Демо',
+          location: BannerLocation.topEnd,
+          child: HomePage(
+            today: widget.today,
+            group: group,
+            onExit: () => Navigator.pop(c),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     plan.dispose();
@@ -125,10 +150,19 @@ class _HomePageState extends State<HomePage> {
       body: IndexedStack(
         index: selectedTab,
         children: [
-          PlannerPage(today: widget.today, plan: plan),
+          PlannerPage(
+            today: widget.today,
+            plan: plan,
+            initialDay: widget.group?.firstDay(plan, widget.today),
+          ),
           DemoTasks(plan: plan),
           MaterialsPage(plan: plan),
-          SettingsPage(plan: plan, onExit: widget.onExit),
+          SettingsPage(
+            plan: plan,
+            onExit: widget.onExit,
+            group: widget.group,
+            onCreateGroup: widget.group == null ? createGroup : null,
+          ),
         ],
       ),
       bottomNavigationBar: UsityTabs(

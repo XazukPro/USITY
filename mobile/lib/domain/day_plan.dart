@@ -91,21 +91,37 @@ List<PlanGroup> groupEntries(Iterable<PlanEntry> entries) {
 
 /// In-memory data for the design stage; the authenticated API has its own store.
 class DemoPlan extends ChangeNotifier {
-  DemoPlan(this.lessons, this.tasks) {
+  DemoPlan(
+    this.lessons,
+    this.tasks, {
+    Map<String, List<String>>? subjectGroups,
+  }) {
+    if (subjectGroups != null) {
+      for (final entry in subjectGroups.entries) {
+        availableSubgroups[entry.key] = entry.value.toSet();
+      }
+    }
     for (final lesson in lessons) {
       if (lesson.subgroup case final String group) {
+        (availableSubgroups[lesson.subject] ??= {}).add(group);
         subgroupChoices.putIfAbsent(lesson.subject, () => group);
+      }
+    }
+    for (final entry in availableSubgroups.entries) {
+      if (entry.value.isNotEmpty) {
+        subgroupChoices.putIfAbsent(entry.key, () => entry.value.first);
       }
     }
   }
   final List<LessonOccurrence> lessons;
   final List<PersonalPlanTask> tasks;
   final subgroupChoices = <String, String>{};
+  final availableSubgroups = <String, Set<String>>{};
   Iterable<LessonOccurrence> get visibleLessons => lessons.where(
     (l) => l.subgroup == null || subgroupChoices[l.subject] == l.subgroup,
   );
   void chooseSubgroup(String subject, String subgroup) {
-    if (!lessons.any((l) => l.subject == subject && l.subgroup == subgroup)) {
+    if (!(availableSubgroups[subject]?.contains(subgroup) ?? false)) {
       return;
     }
     subgroupChoices[subject] = subgroup;
