@@ -5,6 +5,8 @@ class HomeworkItem {
   final int version;
 }
 
+enum LessonKind { lecture, seminar, lab }
+
 class LessonOccurrence {
   const LessonOccurrence({
     required this.id,
@@ -15,6 +17,9 @@ class LessonOccurrence {
     required this.teacher,
     required this.location,
     required this.homework,
+    this.kind = LessonKind.lecture,
+    this.subgroup,
+    this.notes = const {},
   });
 
   final String id;
@@ -25,4 +30,7 @@ class LessonOccurrence {
   final String teacher;
   final String location;
   final List<HomeworkItem> homework;
+  final LessonKind kind;
+  final String? subgroup;
+  final Map<String, String> notes;
 }

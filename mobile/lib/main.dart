@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/app_theme.dart';
@@ -10,7 +11,9 @@ import 'shell/tabs.dart';
 import 'data/usity_api.dart';
 import 'features/schedule/live_home_page.dart';
 
-import 'features/schedule/schedule_page.dart';
+import 'domain/day_plan.dart';
+import 'features/schedule/planner_page.dart';
+import 'features/schedule/demo_tasks.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,32 +50,11 @@ class _UsityAppState extends State<UsityApp> {
   @override
   Widget build(BuildContext context) {
     final today = DateUtils.dateOnly(DateTime.now());
-    final lessons = [
-      LessonOccurrence(
-        id: 'demo-math',
-        date: today,
-        startTime: '09:00',
-        endTime: '10:30',
-        subject: 'Математика',
-        teacher: 'И. А. Иванова',
-        location: 'Аудитория 401',
-        homework: const [HomeworkItem(text: 'Решить номера 4 и 5')],
-      ),
-      LessonOccurrence(
-        id: 'demo-python',
-        date: today,
-        startTime: '10:45',
-        endTime: '12:15',
-        subject: 'Основы программирования',
-        teacher: 'Е. А. Роганов',
-        location: 'Аудитория 205',
-        homework: const [
-          HomeworkItem(text: 'Подготовить практическую работу по спискам'),
-        ],
-      ),
-    ];
     return MaterialApp(
       title: 'USITY',
+      locale: const Locale('ru'),
+      supportedLocales: const [Locale('ru')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       debugShowCheckedModeBanner: false,
       themeMode: mode,
       theme: usityTheme(Brightness.light),
@@ -92,15 +74,14 @@ class _UsityAppState extends State<UsityApp> {
           : Banner(
               message: 'Демо',
               location: BannerLocation.topEnd,
-              child: HomePage(lessons: lessons, today: today),
+              child: HomePage(today: today),
             ),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.lessons, required this.today});
-  final List<LessonOccurrence> lessons;
+  const HomePage({super.key, required this.today});
   final DateTime today;
 
   @override
@@ -109,15 +90,25 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedTab = 0;
+  late final plan = samplePlan(widget.today);
+  @override
+  void dispose() {
+    plan.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: selectedTab == 0
-          ? SchedulePage(today: widget.today, lessons: widget.lessons)
-          : selectedTab == 3
-          ? const SettingsPage()
-          : SafeArea(child: Center(child: Text(tabLabels[selectedTab]))),
+      body: IndexedStack(
+        index: selectedTab,
+        children: [
+          PlannerPage(today: widget.today, plan: plan),
+          DemoTasks(plan: plan),
+          SafeArea(child: Center(child: Text(tabLabels[2]))),
+          const SettingsPage(),
+        ],
+      ),
       bottomNavigationBar: UsityTabs(
         index: selectedTab,
         onSelect: (index) => setState(() => selectedTab = index),
