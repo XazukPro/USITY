@@ -14,7 +14,13 @@ class ApiException implements Exception {
 }
 
 class ScheduleSnapshot {
-  const ScheduleSnapshot(this.groupId, this.canReview, this.lessons);
+  const ScheduleSnapshot(
+    this.groupId,
+    this.canReview,
+    this.lessons, [
+    this.pendingReviewCount = 0,
+  ]);
+  final int pendingReviewCount;
   final String groupId;
   final bool canReview;
   final List<LessonOccurrence> lessons;
@@ -135,6 +141,7 @@ class UsityApi {
       group,
       ['admin', 'owner'].contains(me['role']),
       lessons,
+      me['pending_review_count'] as int? ?? 0,
     );
   }
 
