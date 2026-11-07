@@ -11,7 +11,13 @@ import 'lesson_detail.dart';
 import 'task_sheet.dart';
 
 class PlannerPage extends StatefulWidget {
-  const PlannerPage({super.key, required this.today, required this.plan});
+  const PlannerPage({
+    super.key,
+    required this.today,
+    required this.plan,
+    this.initialDay,
+  });
+  final DateTime? initialDay;
   final DateTime today;
   final DemoPlan plan;
   @override
@@ -52,7 +58,9 @@ String pairCount(int n) {
 }
 
 class _PlannerPageState extends State<PlannerPage> {
-  late DateTime selected = DateUtils.dateOnly(widget.today);
+  late DateTime selected = DateUtils.dateOnly(
+    widget.initialDay ?? widget.today,
+  );
   bool week = false;
   final anchors = List.generate(7, (_) => GlobalKey());
   late final Timer timer;
