@@ -10,7 +10,8 @@ import '../../theme/tokens.dart';
 import 'setup_forms.dart';
 
 class OwnerWizard extends StatefulWidget {
-  const OwnerWizard({super.key, required this.today});
+  const OwnerWizard({super.key, required this.today, this.server = false});
+  final bool server;
   final DateTime today;
   @override
   State<OwnerWizard> createState() => _OwnerWizardState();
@@ -414,7 +415,7 @@ class _OwnerWizardState extends State<OwnerWizard> {
                       icon: const Icon(Icons.chevron_left),
                     ),
                     const SizedBox(width: Metrics.space3),
-                    for (var i = 0; i < 5; i++)
+                    for (var i = 0; i < (widget.server ? 3 : 5); i++)
                       Expanded(
                         child: Container(
                           height: 6,
@@ -449,7 +450,7 @@ class _OwnerWizardState extends State<OwnerWizard> {
                   onPressed: !valid
                       ? null
                       : () {
-                          if (step == 4) {
+                          if (step == 4 || (widget.server && step == 2)) {
                             Navigator.pop(context, draft);
                           } else if (step == 3 &&
                               !draft.telegramDemoConnected) {
@@ -459,7 +460,9 @@ class _OwnerWizardState extends State<OwnerWizard> {
                           }
                         },
                   child: Text(
-                    step == 4
+                    step == 2 && widget.server
+                        ? 'Подтвердить расписание'
+                        : step == 4
                         ? 'Готово'
                         : step == 3 && !draft.telegramDemoConnected
                         ? 'Проверить подключение'

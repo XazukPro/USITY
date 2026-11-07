@@ -5,9 +5,25 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
+from app.accounts import install_accounts
 from app.auth import authenticate, require_group
 from app.db import make_engine
-from app.models import Assignment, Completion, Draft, Lesson, utc_now
+from app.group_access import (
+    allowed_lessons,
+    assignment_audience,
+    audience_visible_to,
+    subject_group_counts,
+)
+from app.mail_codes import LoginMail
+from app.models import (
+    Assignment,
+    AssignmentSubgroup,
+    Completion,
+    Draft,
+    Lesson,
+    LessonDetails,
+    utc_now,
+)
 from app.schemas import CompletionInput, DecisionInput, LessonInput
 from app.telegram import ConnectionDenied, connection_status, issue_connect_code
 
@@ -19,7 +35,7 @@ def lesson_json(lesson):
     }
 
 
-def create_app(database_url):
+def create_app(database_url, *, login_mail=None):
     engine = make_engine(database_url)
 
     @asynccontextmanager
@@ -34,6 +50,7 @@ def create_app(database_url):
             yield session
 
     DB = Annotated[Session, Depends(database)]
+    install_accounts(app, DB, login_mail or LoginMail.configured())
 
     def current_member(db: DB, authorization: Annotated[str | None, Header()] = None):
         return authenticate(db, authorization)
@@ -48,6 +65,7 @@ def create_app(database_url):
             "role": member.role,
         }
         if member.role in ("owner", "admin"):
+            data["subject_group_counts"] = subject_group_counts(db, member.group_id)
             data["pending_review_count"] = db.scalar(
                 select(func.count())
                 .select_from(Draft)
@@ -77,10 +95,11 @@ def create_app(database_url):
     def lessons(group_id: str, db: DB, member: Member):
         require_group(member, group_id)
         return [
-            lesson_json(row)
-            for row in db.scalars(
-                select(Lesson)
-                .where(Lesson.group_id == group_id)
+            {**lesson_json(row), "kind": kind or "lecture", "subgroup": subgroup}
+            for row, kind, subgroup in db.execute(
+                select(Lesson, LessonDetails.kind, LessonDetails.subgroup)
+                .outerjoin(LessonDetails)
+                .where(Lesson.id.in_(allowed_lessons(member)))
                 .order_by(Lesson.starts_at, Lesson.id)
             )
         ]
@@ -136,7 +155,7 @@ def create_app(database_url):
                 version=Draft.version + 1,
                 decided_by=member.user_id,
                 decided_at=utc_now(),
-                human_output=body.model_dump(),
+                human_output=body.model_dump(exclude_unset=True),
             )
             .execution_options(synchronize_session=False)
         )
@@ -180,6 +199,10 @@ def create_app(database_url):
             db.add(assignment)
             db.flush()
             assignment_id = assignment.id
+            db.add_all(
+                AssignmentSubgroup(assignment_id=assignment_id, subgroup=g)
+                for g in assignment_audience(db, lesson, body.subgroups)
+            )
         db.commit()
         return {"status": status, "assignment_id": assignment_id}
 
@@ -194,7 +217,12 @@ def create_app(database_url):
         )
         rows = db.scalars(
             select(Assignment)
-            .where(Assignment.group_id == group_id, ~completed)
+            .where(
+                Assignment.group_id == group_id,
+                Assignment.lesson_id.in_(allowed_lessons(member)),
+                audience_visible_to(member),
+                ~completed,
+            )
             .order_by(Assignment.id)
         )
         return [
@@ -210,7 +238,12 @@ def create_app(database_url):
         # Lock the assignment so two devices cannot race an insert or revision change.
         assignment = db.scalar(
             select(Assignment)
-            .where(Assignment.id == assignment_id, Assignment.group_id == group_id)
+            .where(
+                Assignment.id == assignment_id,
+                Assignment.group_id == group_id,
+                Assignment.lesson_id.in_(allowed_lessons(member)),
+                audience_visible_to(member),
+            )
             .with_for_update()
         )
         if assignment is None:

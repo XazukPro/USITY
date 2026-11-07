@@ -17,6 +17,7 @@ import 'features/schedule/demo_tasks.dart';
 import 'features/materials/materials_page.dart';
 import 'domain/group_setup.dart';
 import 'features/onboarding/owner_wizard.dart';
+import 'features/account/account_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +83,8 @@ class _UsityAppState extends State<UsityApp> {
           kDebugMode &&
               const String.fromEnvironment('USITY_SESSION_TOKEN').isNotEmpty
           ? LiveHomePage(api: api)
+          : const String.fromEnvironment('USITY_API_URL').isNotEmpty
+          ? const AccountPage(baseUrl: String.fromEnvironment('USITY_API_URL'))
           : Banner(
               message: 'Демо',
               location: BannerLocation.topEnd,

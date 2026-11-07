@@ -40,13 +40,16 @@ class DecisionInput(InputModel):
     expected_version: int = Field(ge=1, strict=True)
     lesson_id: Identifier | None = None
     text: Text | None = None
+    subgroups: list[Annotated[int, Field(strict=True, ge=1, le=100)]] = Field(
+        default_factory=list, max_length=100
+    )
 
     @model_validator(mode="after")
     def approval_requires_lesson(self):
         if self.action == "approve" and (self.lesson_id is None or self.text is None):
             raise ValueError("Для публикации выберите пару и заполните текст")
         if self.action == "reject" and (
-            self.lesson_id is not None or self.text is not None
+            self.lesson_id is not None or self.text is not None or self.subgroups
         ):
             raise ValueError("Отклонение не содержит публикуемых полей")
         return self
