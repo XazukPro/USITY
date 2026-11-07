@@ -4,34 +4,9 @@ import '../../design/components.dart';
 import '../../domain/day_plan.dart';
 import '../../domain/schedule.dart';
 import '../../theme/tokens.dart';
-
-extension LessonAppearance on LessonKind {
-  String get label => switch (this) {
-    LessonKind.lecture => 'Лекция',
-    LessonKind.seminar => 'Семинар',
-    LessonKind.lab => 'Лабораторная',
-  };
-  IconData get icon => switch (this) {
-    LessonKind.lecture => Icons.co_present_outlined,
-    LessonKind.seminar => Icons.people_outline,
-    LessonKind.lab => Icons.science_outlined,
-  };
-  Color tint(Palette p) => switch (this) {
-    LessonKind.lecture => p.lectureTint,
-    LessonKind.seminar => p.seminarTint,
-    LessonKind.lab => p.labTint,
-  };
-  Color ink(Palette p) => switch (this) {
-    LessonKind.lecture => p.lectureInk,
-    LessonKind.seminar => p.seminarInk,
-    LessonKind.lab => p.labInk,
-  };
-  Color fill(Palette p) => switch (this) {
-    LessonKind.lecture => p.lecture,
-    LessonKind.seminar => p.seminar,
-    LessonKind.lab => p.lab,
-  };
-}
+import '../../design/lesson_appearance.dart';
+export '../../design/lesson_appearance.dart';
+import '../materials/material_tile.dart';
 
 class LessonDetail extends StatelessWidget {
   const LessonDetail({super.key, required this.lesson, required this.plan});
@@ -131,39 +106,9 @@ class LessonDetail extends StatelessWidget {
             const SizedBox(height: Metrics.space6),
             const Text('Материалы', style: TypeScale.heading),
             const SizedBox(height: Metrics.space2),
-            if (lesson.notes.isEmpty) const Text('Материалов пока нет'),
-            for (final note in lesson.notes.entries)
-              ListTile(
-                tileColor: p.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(Metrics.space5),
-                ),
-                leading: Icon(
-                  Icons.description_outlined,
-                  color: lesson.kind.ink(p),
-                ),
-                title: Text(note.key),
-                subtitle: const Text('Учебная заметка'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => showModalBottomSheet<void>(
-                  context: context,
-                  showDragHandle: true,
-                  builder: (_) => SafeArea(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(Metrics.space5),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(note.key, style: TypeScale.title),
-                          const SizedBox(height: Metrics.space4),
-                          SelectableText(note.value),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            if (lesson.materials.isEmpty) const Text('Материалов пока нет'),
+            for (final item in lesson.materials)
+              MaterialTile(item: item, lesson: lesson),
           ],
         ),
       ),

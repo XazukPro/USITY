@@ -77,6 +77,11 @@ void main() {
       expect(find.text('Купить тетрадь'), findsNothing);
       await t.tap(find.text('Задачи').last);
       await t.pumpAndSettle();
+      await t.scrollUntilVisible(
+        find.text('Купить тетрадь').hitTestable(),
+        180,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.text('Купить тетрадь'), findsOneWidget);
       await t.tap(find.text('Купить тетрадь'));
       await t.pumpAndSettle();
