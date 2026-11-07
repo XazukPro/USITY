@@ -91,9 +91,27 @@ List<PlanGroup> groupEntries(Iterable<PlanEntry> entries) {
 
 /// In-memory data for the design stage; the authenticated API has its own store.
 class DemoPlan extends ChangeNotifier {
-  DemoPlan(this.lessons, this.tasks);
+  DemoPlan(this.lessons, this.tasks) {
+    for (final lesson in lessons) {
+      if (lesson.subgroup case final String group) {
+        subgroupChoices.putIfAbsent(lesson.subject, () => group);
+      }
+    }
+  }
   final List<LessonOccurrence> lessons;
   final List<PersonalPlanTask> tasks;
+  final subgroupChoices = <String, String>{};
+  Iterable<LessonOccurrence> get visibleLessons => lessons.where(
+    (l) => l.subgroup == null || subgroupChoices[l.subject] == l.subgroup,
+  );
+  void chooseSubgroup(String subject, String subgroup) {
+    if (!lessons.any((l) => l.subject == subject && l.subgroup == subgroup)) {
+      return;
+    }
+    subgroupChoices[subject] = subgroup;
+    notifyListeners();
+  }
+
   final _completedHomework = <HomeworkItem>{};
   bool done(HomeworkItem item) => _completedHomework.contains(item);
   int remaining(LessonOccurrence lesson) =>
@@ -124,7 +142,7 @@ class DemoPlan extends ChangeNotifier {
   }
 
   List<PlanEntry> entriesOn(DateTime day) => [
-    for (final lesson in lessons)
+    for (final lesson in visibleLessons)
       if (DateUtils.isSameDay(day, lesson.date)) PlanEntry.lesson(lesson),
     for (final task in tasks)
       if (task.start != null &&
@@ -146,7 +164,7 @@ DemoPlan samplePlan(DateTime day) {
     List<String> work, {
     int offset = 0,
     String? subgroup,
-    Map<String, String> notes = const {},
+    List<StudyMaterial> materials = const [],
   }) => LessonOccurrence(
     id: id,
     date: DateTime(day.year, day.month, day.day + offset),
@@ -157,7 +175,7 @@ DemoPlan samplePlan(DateTime day) {
     teacher: teacher,
     location: room,
     subgroup: subgroup,
-    notes: notes,
+    materials: materials,
     homework: [
       for (final text in work) HomeworkItem(text: text, id: '$id-$text'),
     ],
@@ -177,9 +195,20 @@ DemoPlan samplePlan(DateTime day) {
           'Подготовить доказательство теоремы 3',
           'Прочитать конспект лекции 7',
         ],
-        notes: const {
-          'Конспект к семинару': 'Принцип включения и исключения\n\nДля двух конечных множеств число элементов в объединении равно сумме их мощностей за вычетом мощности пересечения.\n\nК семинару подготовьте пример с пересекающимися множествами.',
-        },
+        materials: const [
+          StudyMaterial(
+            'Множества и операции',
+            ResourceKind.pdf,
+            'assets/demo/sets.pdf',
+            'Практика',
+          ),
+          StudyMaterial(
+            'Конспект к семинару',
+            ResourceKind.note,
+            'Принцип включения и исключения\n\nДля двух конечных множеств число элементов в объединении равно сумме их мощностей за вычетом мощности пересечения.\n\nК семинару подготовьте пример с пересекающимися множествами.',
+            'Лекции',
+          ),
+        ],
       ),
       lesson(
         'analysis',
@@ -190,6 +219,14 @@ DemoPlan samplePlan(DateTime day) {
         'Громов А. И.',
         'Онлайн',
         [],
+        materials: const [
+          StudyMaterial(
+            'Ряды Тейлора',
+            ResourceKind.note,
+            'Ряд Тейлора представляет функцию через значения её производных в одной точке.\n\nНа занятии сравним приближения первого и второго порядка для экспоненты.',
+            'Лекции',
+          ),
+        ],
       ),
       lesson(
         'english',
@@ -203,6 +240,17 @@ DemoPlan samplePlan(DateTime day) {
         subgroup: '1',
       ),
       lesson(
+        'english-2',
+        'Иностранный язык',
+        '15:00',
+        '16:35',
+        LessonKind.seminar,
+        'Рахимова Н. М.',
+        'Б-314',
+        ['Прочитать диалог к занятию'],
+        subgroup: '2',
+      ),
+      lesson(
         'lab',
         'Основы программирования',
         '10:15',
@@ -212,6 +260,14 @@ DemoPlan samplePlan(DateTime day) {
         'Л-204',
         ['Подготовить отчёт'],
         offset: 1,
+        materials: const [
+          StudyMaterial(
+            'Учебник Python',
+            ResourceKind.link,
+            'https://docs.python.org/3/tutorial/',
+            'Учебники',
+          ),
+        ],
       ),
     ],
     [

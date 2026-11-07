@@ -38,6 +38,9 @@ dependencies:
   shared_preferences: ^2.5.6
   flutter_localizations:
     sdk: flutter
+  url_launcher: ^6.3.3
+  open_filex: ^5.0.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -61,6 +64,7 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
+    - assets/demo/sets.pdf
     - assets/fonts/Onest-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
   fonts:

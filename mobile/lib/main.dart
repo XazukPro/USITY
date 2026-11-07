@@ -14,6 +14,7 @@ import 'features/schedule/live_home_page.dart';
 import 'domain/day_plan.dart';
 import 'features/schedule/planner_page.dart';
 import 'features/schedule/demo_tasks.dart';
+import 'features/materials/materials_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,9 @@ class UsityApp extends StatefulWidget {
 }
 
 class _UsityAppState extends State<UsityApp> {
+  bool demoOpen = true;
+  late bool notifications =
+      widget.preferences?.getBool('demo.notifications') ?? true;
   late final api = UsityApi(
     baseUrl: const String.fromEnvironment(
       'USITY_API_URL',
@@ -61,6 +65,11 @@ class _UsityAppState extends State<UsityApp> {
       darkTheme: usityTheme(Brightness.dark),
       builder: (_, child) => ThemePreference(
         mode: mode,
+        notifications: notifications,
+        setNotifications: (value) {
+          setState(() => notifications = value);
+          widget.preferences?.setBool('demo.notifications', value);
+        },
         select: (value) {
           setState(() => mode = value);
           widget.preferences?.setString('themeMode', value.name);
@@ -74,14 +83,27 @@ class _UsityAppState extends State<UsityApp> {
           : Banner(
               message: 'Демо',
               location: BannerLocation.topEnd,
-              child: HomePage(today: today),
+              child: demoOpen
+                  ? HomePage(
+                      today: today,
+                      onExit: () => setState(() => demoOpen = false),
+                    )
+                  : Scaffold(
+                      body: Center(
+                        child: FilledButton(
+                          onPressed: () => setState(() => demoOpen = true),
+                          child: const Text('Открыть демо USITY'),
+                        ),
+                      ),
+                    ),
             ),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.today});
+  const HomePage({super.key, required this.today, this.onExit});
+  final VoidCallback? onExit;
   final DateTime today;
 
   @override
@@ -105,8 +127,8 @@ class _HomePageState extends State<HomePage> {
         children: [
           PlannerPage(today: widget.today, plan: plan),
           DemoTasks(plan: plan),
-          SafeArea(child: Center(child: Text(tabLabels[2]))),
-          const SettingsPage(),
+          MaterialsPage(plan: plan),
+          SettingsPage(plan: plan, onExit: widget.onExit),
         ],
       ),
       bottomNavigationBar: UsityTabs(
