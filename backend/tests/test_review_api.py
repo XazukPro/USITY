@@ -329,6 +329,13 @@ def test_session_profile_drives_client_permissions(setup):
     s = setup
     assert s["client"].get("/me").status_code == 401
     profile = s["client"].get("/me", headers=headers(s, "student")).json()
+    assert (
+        s["client"].get("/me", headers=headers(s)).json()["pending_review_count"] == 1
+    )
+    assert decide(s).status_code == 200
+    assert (
+        s["client"].get("/me", headers=headers(s)).json()["pending_review_count"] == 0
+    )
     assert profile == {
         "user_id": s["users"]["student"],
         "group_id": s["group"],

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from sqlalchemy import exists, select, update
+from sqlalchemy import exists, func, select, update
 from sqlalchemy.orm import Session
 
 from app.auth import authenticate, require_group
@@ -41,12 +41,19 @@ def create_app(database_url):
     Member = Annotated[object, Depends(current_member)]
 
     @app.get("/me")
-    def profile(member: Member):
-        return {
+    def profile(db: DB, member: Member):
+        data = {
             "user_id": member.user_id,
             "group_id": member.group_id,
             "role": member.role,
         }
+        if member.role in ("owner", "admin"):
+            data["pending_review_count"] = db.scalar(
+                select(func.count())
+                .select_from(Draft)
+                .where(Draft.group_id == member.group_id, Draft.status == "pending")
+            )
+        return data
 
     @app.get("/health")
     def health():

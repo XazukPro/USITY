@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../design/components.dart';
+import '../../theme/tokens.dart';
+
 import '../../domain/schedule.dart';
 export '../../domain/schedule.dart';
 
@@ -51,9 +54,6 @@ class _SchedulePageState extends State<SchedulePage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final monday = selectedDay.subtract(
-      Duration(days: selectedDay.weekday - 1),
-    );
     final dayLessons =
         widget.lessons
             .where((lesson) => DateUtils.isSameDay(lesson.date, selectedDay))
@@ -79,65 +79,9 @@ class _SchedulePageState extends State<SchedulePage> {
                 ],
               ),
             ),
-            SizedBox(
-              height: 76,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                scrollDirection: Axis.horizontal,
-                itemCount: 7,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final day = monday.add(Duration(days: index));
-                  final selected = DateUtils.isSameDay(day, selectedDay);
-                  final key =
-                      'day-${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-                  return Semantics(
-                    selected: selected,
-                    button: true,
-                    label:
-                        '${weekdays[index]}, ${day.day} ${months[day.month - 1]}',
-                    child: InkWell(
-                      key: Key(key),
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => selectDay(day),
-                      child: Container(
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? colors.primary
-                              : colors.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              weekdays[index],
-                              style: TextStyle(
-                                color: selected
-                                    ? colors.onPrimary
-                                    : colors.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${day.day}',
-                              style: TextStyle(
-                                color: selected
-                                    ? colors.onPrimary
-                                    : colors.onSurface,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Metrics.space5),
+              child: DayStrip(selected: selectedDay, onSelect: selectDay),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),

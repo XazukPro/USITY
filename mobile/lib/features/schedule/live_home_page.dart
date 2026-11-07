@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../data/usity_api.dart';
+import '../../shell/tabs.dart';
+import '../../shell/settings.dart';
 import '../review/review_page.dart';
 import 'schedule_page.dart';
 
@@ -16,6 +18,19 @@ class _LiveHomePageState extends State<LiveHomePage> {
   int tab = 0;
   DateTime selectedDay = DateTime.now();
   bool completing = false;
+  Future<void> openReview(ScheduleSnapshot data) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ReviewPage(
+          api: widget.api,
+          groupId: data.groupId,
+          lessons: data.lessons,
+        ),
+      ),
+    );
+    if (mounted) refresh();
+  }
+
   void refresh() => setState(() {
     snapshot = widget.api.loadSchedule();
   });
@@ -60,17 +75,18 @@ class _LiveHomePageState extends State<LiveHomePage> {
           ),
         ),
         Expanded(
-          child: tab != 0
-              ? Center(
-                  child: Text(
-                    [
-                      '',
-                      'Предметы — в разработке',
-                      'Личные задачи — в разработке',
-                      'Настройки — в разработке',
-                    ][tab],
+          child: tab == 3
+              ? FutureBuilder<ScheduleSnapshot>(
+                  future: snapshot,
+                  builder: (context, state) => SettingsPage(
+                    pending: state.data?.pendingReviewCount ?? 0,
+                    onReview: state.data?.canReview == true
+                        ? () => openReview(state.data!)
+                        : null,
                   ),
                 )
+              : tab != 0
+              ? Center(child: Text(tabLabels[tab]))
               : FutureBuilder<ScheduleSnapshot>(
                   future: snapshot,
                   builder: (context, state) {
@@ -111,18 +127,7 @@ class _LiveHomePageState extends State<LiveHomePage> {
                           IconButton(
                             tooltip: 'Проверить ДЗ',
                             icon: const Icon(Icons.fact_check_outlined),
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ReviewPage(
-                                    api: widget.api,
-                                    groupId: data.groupId,
-                                    lessons: data.lessons,
-                                  ),
-                                ),
-                              );
-                              if (mounted) refresh();
-                            },
+                            onPressed: () => openReview(data),
                           ),
                         IconButton(
                           tooltip: 'Обновить',
@@ -136,27 +141,15 @@ class _LiveHomePageState extends State<LiveHomePage> {
         ),
       ],
     ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: tab,
-      onDestinationSelected: (value) => setState(() => tab = value),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.calendar_today_outlined),
-          label: 'Расписание',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.menu_book_outlined),
-          label: 'Предметы',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.check_circle_outline),
-          label: 'Задачи',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.settings_outlined),
-          label: 'Настройки',
-        ),
-      ],
+    bottomNavigationBar: FutureBuilder<ScheduleSnapshot>(
+      future: snapshot,
+      builder: (context, state) => UsityTabs(
+        index: tab,
+        pending: state.data?.canReview == true
+            ? state.data!.pendingReviewCount
+            : 0,
+        onSelect: (value) => setState(() => tab = value),
+      ),
     ),
   );
 }
