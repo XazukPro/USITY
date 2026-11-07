@@ -167,6 +167,7 @@ class LessonCard extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
+            if (lesson.subgroup != null) Text('Подгруппа ${lesson.subgroup}'),
             Text(
               lesson.teacher,
               style: TextStyle(color: colors.onSurfaceVariant),

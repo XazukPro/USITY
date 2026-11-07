@@ -9,10 +9,12 @@ class ReviewPage extends StatefulWidget {
     required this.api,
     required this.groupId,
     required this.lessons,
+    this.subjectGroupCounts = const {},
   });
   final UsityApi api;
   final String groupId;
   final List<LessonOccurrence> lessons;
+  final Map<String, int> subjectGroupCounts;
   @override
   State<ReviewPage> createState() => _ReviewPageState();
 }
@@ -79,6 +81,7 @@ class _ReviewPageState extends State<ReviewPage> {
                         groupId: widget.groupId,
                         draft: draft,
                         lessons: widget.lessons,
+                        subjectGroupCounts: widget.subjectGroupCounts,
                       ),
                     ),
                   );
@@ -100,9 +103,11 @@ class ReviewEditor extends StatefulWidget {
     required this.groupId,
     required this.draft,
     required this.lessons,
+    this.subjectGroupCounts = const {},
     this.now,
   });
   final DateTime Function()? now;
+  final Map<String, int> subjectGroupCounts;
   final UsityApi api;
   final String groupId;
   final ReviewDraft draft;
@@ -114,6 +119,7 @@ class ReviewEditor extends StatefulWidget {
 class _ReviewEditorState extends State<ReviewEditor> {
   late final text = TextEditingController(text: widget.draft.text);
   String? lessonId;
+  final subgroups = <int>{};
   String? error;
   bool busy = false;
   bool conflict = false;
@@ -144,6 +150,7 @@ class _ReviewEditorState extends State<ReviewEditor> {
         approve: approve,
         text: approve ? text.text.trim() : null,
         lessonId: approve ? lessonId : null,
+        subgroups: subgroups.toList()..sort(),
       );
       if (mounted) Navigator.of(context).pop();
     } on ApiException catch (e) {
@@ -182,6 +189,8 @@ class _ReviewEditorState extends State<ReviewEditor> {
   Widget build(BuildContext context) {
     final available = futureLessons();
     if (!available.any((lesson) => lesson.id == lessonId)) lessonId = null;
+    final selected = available.where((l) => l.id == lessonId).firstOrNull;
+    final count = widget.subjectGroupCounts[selected?.subject] ?? 0;
     return PopScope(
       canPop: !busy,
       child: Scaffold(
@@ -239,15 +248,48 @@ class _ReviewEditorState extends State<ReviewEditor> {
                   DropdownMenuItem(
                     value: lesson.id,
                     child: Text(
-                      '${lesson.subject} · ${lesson.date.day}.${lesson.date.month} · ${lesson.startTime}',
+                      '${lesson.subject} · ${lesson.date.day}.${lesson.date.month} · ${lesson.startTime}${lesson.subgroup == null ? '' : ' · п/г ${lesson.subgroup}'}',
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
               ],
               onChanged: busy || conflict
                   ? null
-                  : (value) => setState(() => lessonId = value),
+                  : (value) => setState(() {
+                      lessonId = value;
+                      subgroups.clear();
+                    }),
             ),
+            if (selected != null && count > 0 && selected.subgroup == null) ...[
+              const SizedBox(height: 16),
+              const Text('Кому задано'),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Всем'),
+                    selected: subgroups.isEmpty,
+                    onSelected: busy || conflict
+                        ? null
+                        : (_) => setState(subgroups.clear),
+                  ),
+                  for (int g = 1; g <= count; g++)
+                    FilterChip(
+                      label: Text('Подгруппа $g'),
+                      selected: subgroups.contains(g),
+                      onSelected: busy || conflict
+                          ? null
+                          : (on) => setState(() {
+                              if (on) {
+                                subgroups.add(g);
+                              } else {
+                                subgroups.remove(g);
+                              }
+                            }),
+                    ),
+                ],
+              ),
+            ],
             if (available.isEmpty)
               const Padding(
                 padding: EdgeInsets.only(top: 12),

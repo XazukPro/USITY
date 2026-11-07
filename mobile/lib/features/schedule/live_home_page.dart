@@ -25,6 +25,7 @@ class _LiveHomePageState extends State<LiveHomePage> {
           api: widget.api,
           groupId: data.groupId,
           lessons: data.lessons,
+          subjectGroupCounts: data.subjectGroupCounts,
         ),
       ),
     );

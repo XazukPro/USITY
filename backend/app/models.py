@@ -136,6 +136,14 @@ class Assignment(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
 
 
+class AssignmentSubgroup(Base):
+    __tablename__ = "assignment_subgroups"
+    assignment_id: Mapped[str] = mapped_column(
+        ForeignKey("assignments.id", ondelete="CASCADE"), primary_key=True
+    )
+    subgroup: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
 class Completion(Base):
     __tablename__ = "assignment_completions"
     assignment_id: Mapped[str] = mapped_column(
@@ -147,3 +155,57 @@ class Completion(Base):
     version: Mapped[int] = mapped_column(Integer)
     completed: Mapped[bool] = mapped_column(Boolean)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)
+
+
+class Account(Base):
+    __tablename__ = "accounts"
+    id: Mapped[str] = mapped_column(String(100), primary_key=True, default=new_id)
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+
+
+class AccountSession(Base):
+    __tablename__ = "account_sessions"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"), index=True)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class EmailCode(Base):
+    __tablename__ = "email_codes"
+    email: Mapped[str] = mapped_column(String(254), primary_key=True)
+    digest: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    attempts: Mapped[int] = mapped_column(Integer)
+
+
+class RateBucket(Base):
+    __tablename__ = "login_limits"
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    until: Mapped[datetime] = mapped_column(UTCDateTime(), index=True)
+    count: Mapped[int] = mapped_column(Integer)
+
+
+class GroupDetails(Base):
+    __tablename__ = "group_details"
+    group_id: Mapped[str] = mapped_column(
+        ForeignKey("study_groups.id"), primary_key=True
+    )
+    name: Mapped[str] = mapped_column(String(100))
+    semester: Mapped[dict] = mapped_column(JSON)
+    invite_nonce: Mapped[str] = mapped_column(String(64))
+
+
+class LessonDetails(Base):
+    __tablename__ = "lesson_details"
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id"), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    subgroup: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class SubjectChoice(Base):
+    __tablename__ = "subject_choices"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("memberships.user_id"), primary_key=True
+    )
+    subject: Mapped[str] = mapped_column(String(200), primary_key=True)
+    subgroup: Mapped[int] = mapped_column(Integer)
