@@ -3,8 +3,9 @@
 ## Дизайн-проект и порядок работы
 
 - Новый handoff хранится в `docs/design/`, `docs/product/PRODUCT-RULES.md` и `docs/tech/`. Оригинальный `AGENTS.md` архива сохранён в `docs/tech/HANDOFF-AGENTS.md`. Перед реализацией экрана прочитай `docs/design/SCREENS.md`, `docs/design/DESIGN-SYSTEM.md`, `docs/design/tokens.json` и сверяй обе темы с `docs/design/screens/` и `docs/design/prototype/`.
-- План этапов — `docs/tech/BUILD-PLAN.md`. До начала кода сопоставь его с действующим стеком и существующими модулями, назови расхождения и согласуй порядок работ. Не запускай этап автоматически после импорта документов.
-- Архив предлагает Expo/React Native, Supabase/NestJS и grammY. Это предложение handoff, а действующее решение проекта — Flutter/Dart, Python/FastAPI, aiogram, PostgreSQL и предусмотренные ниже хранилище, очередь и offline. Не меняй стек без отдельного решения команды.
+- План этапов — `docs/tech/BUILD-PLAN.md`. Он согласован с действующим стеком и существующими модулями; начинай отдельный этап только по задаче пользователя.
+- Архив предлагал Expo/React Native, Supabase/NestJS и grammY. Действующее решение проекта — Flutter/Dart, Python/FastAPI, aiogram, PostgreSQL и предусмотренные ниже хранилище, очередь и offline. Не меняй стек без отдельного решения команды.
+- При расхождении импортированного `HANDOFF-AGENTS.md` с корневым `AGENTS.md`, `docs/product/mvp.md`, `docs/product/PRODUCT-RULES.md` и адаптированным `docs/tech/BUILD-PLAN.md` действуют корневые и адаптированные документы. Пять решений о расхождениях зафиксированы в `docs/tech/USITY-ADOPTION-NOTES.md`.
 - Следуй визуальным эталонам: светлая и тёмная темы, Onest для интерфейса, JetBrains Mono для времени, цвета и размеры из `tokens.json`. Не копируй дизайн в код по памяти; фиксируй расхождения со скриншотами после каждого этапа.
 
 - Перед изменением поведения сверяйся с `docs/product/mvp.md`. AI-часть дополнительно сверяй с `docs/research/ai-course-notes-ru.md`.
