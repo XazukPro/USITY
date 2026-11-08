@@ -3,7 +3,7 @@ from dataclasses import replace
 import pytest
 
 from app.agents.contracts import AgentRun, EventBundle, SourceMessage
-from app.agents.registry import AGENT_IDS, run_all_agents
+from app.agents.registry import AGENT_IDS, build_default_agents, run_all_agents
 
 
 class FixedAgent:
@@ -64,4 +64,26 @@ def test_off_topic_message_is_rejected_before_any_agent_runs():
         run_all_agents(invalid, agents)
 
     assert [agent.calls for agent in agents] == [0] * len(AGENT_IDS)
+
+
+def test_default_registry_wires_all_five_real_agent_modules():
+    class Provider:
+        model_name = "fake-v1"
+
+        def complete(self, system_prompt, event_json):
+            if "НОВОЕ домашнее" in system_prompt:
+                return '{"kind":"none","text":null,"source_ids":[],"uncertain":false}'
+            if "привязываешь" in system_prompt:
+                return '{"subject_mention":null,"subgroup_mentions":null,"deadline_kind":"none","deadline_date":null,"source_ids":[10]}'
+            if "дубли" in system_prompt:
+                return '{"duplicates":[]}'
+            if "учебные материалы" in system_prompt:
+                return '{"materials":[]}'
+            return '{"changes":[]}'
+
+    agents = build_default_agents(Provider(), now="2026-11-08T12:00:00+03:00")
+    runs = run_all_agents(bundle(), agents)
+
+    assert [agent.agent_id for agent in agents] == list(AGENT_IDS)
+    assert [run.agent_id for run in runs] == list(AGENT_IDS)
 
