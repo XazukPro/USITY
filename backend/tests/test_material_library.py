@@ -123,6 +123,10 @@ def test_authorized_download_and_rejection_removes_blob(library):
     (obj,) = root.iterdir()
     assert obj.name != item["filename"] and obj.stat().st_mode & 0o077 == 0
     path = "/" + item["id"] + "/download"
+    assert call("student2", "HEAD", path).status_code == 404
+    cached = call("admin", "HEAD", path)
+    assert cached.status_code == 200 and cached.content == b""
+    assert cached.headers["Content-Length"] == str(len(PDF))
     assert call(None, suffix=path).status_code == 401
     assert call("student2", suffix=path).status_code == 404
     assert call("outsider", suffix=path).status_code == 403

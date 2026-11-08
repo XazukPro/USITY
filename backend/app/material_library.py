@@ -25,7 +25,7 @@ from uuid import uuid4
 from xml.etree import ElementTree
 
 from fastapi import Header, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import Field, StringConstraints, ValidationError, field_validator
 from sqlalchemy import JSON, ForeignKey, Integer, String, Text, select
 from sqlalchemy.exc import IntegrityError
@@ -598,16 +598,13 @@ def install_material_library(app, DB, Member):
 
             return await run_in_threadpool(finish)
 
+    @app.head(path + "/{item_id}/download")
     @app.get(path + "/{item_id}/download")
-    def download(group_id: str, item_id: str, db: DB, member: Member):
+    def download(group_id: str, item_id: str, request: Request, db: DB, member: Member):
         require_group(member, group_id)
         row = _item(db, group_id, member, item_id)
         if not row.blob_key or row.status == "rejected":
             raise HTTPException(404, "Файл недоступен")
-        try:
-            body = _storage(app, db).open(row.blob_key)
-        except Exception as exc:
-            raise HTTPException(503, "Не удалось прочитать файл") from exc
         headers = {
             "Content-Length": str(row.size),
             "Cache-Control": "private, no-store",
@@ -616,6 +613,12 @@ def install_material_library(app, DB, Member):
             + quote(row.filename, safe=""),
         }
         mime = row.mime
+        if request.method == "HEAD":
+            return Response(headers=headers, media_type=mime)
+        try:
+            body = _storage(app, db).open(row.blob_key)
+        except Exception as exc:
+            raise HTTPException(503, "Не удалось прочитать файл") from exc
         db.rollback()
 
         def chunks():
