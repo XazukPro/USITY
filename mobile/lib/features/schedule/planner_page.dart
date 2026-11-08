@@ -16,8 +16,10 @@ class PlannerPage extends StatefulWidget {
     required this.today,
     required this.plan,
     this.initialDay,
+    this.onMaterials,
   });
   final DateTime? initialDay;
+  final ValueChanged<String>? onMaterials;
   final DateTime today;
   final DemoPlan plan;
   @override
@@ -97,7 +99,11 @@ class _PlannerPageState extends State<PlannerPage> {
   void lesson(LessonOccurrence l) => Navigator.push(
     context,
     MaterialPageRoute<void>(
-      builder: (_) => LessonDetail(lesson: l, plan: widget.plan),
+      builder: (_) => LessonDetail(
+        lesson: l,
+        plan: widget.plan,
+        onMaterials: widget.onMaterials,
+      ),
     ),
   );
   Future<void> edit([PersonalPlanTask? task]) async {

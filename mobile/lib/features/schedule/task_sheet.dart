@@ -124,6 +124,13 @@ class _EditorState extends State<_Editor> {
             const SizedBox(height: Metrics.space4),
             TextField(
               controller: text,
+              maxLength: 20000,
+              buildCounter: (
+                _, {
+                required currentLength,
+                required isFocused,
+                required maxLength,
+              }) => null,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
                 labelText: 'Что нужно сделать',

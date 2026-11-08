@@ -27,7 +27,11 @@ class PersonalPlanTask {
     this.start,
     this.duration, {
     this.remind = false,
+    this.id,
+    this.version,
   });
+  String? id;
+  final int? version;
   String title;
   DateTime day;
   int? start;

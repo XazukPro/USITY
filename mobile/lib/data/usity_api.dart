@@ -7,7 +7,8 @@ import '../domain/schedule.dart';
 import '../domain/group_setup.dart';
 
 class ApiException implements Exception {
-  const ApiException(this.status, this.message);
+  const ApiException(this.status, this.message, [this.detail]);
+  final dynamic detail;
   final int status;
   final String message;
   @override
@@ -68,13 +69,19 @@ class UsityApi {
   final http.Client client;
   void close() => client.close();
 
-  Future<dynamic> _request(
+  Future<dynamic> request(
     String method,
     String path, [
     Map<String, dynamic>? body,
   ]) async {
     try {
-      final request = http.Request(method, base.resolve(path))
+      final uri = base.resolve(path);
+      if (uri.origin != base.origin ||
+          !path.startsWith('/') ||
+          uri.userInfo.isNotEmpty) {
+        throw ArgumentError('Неверный путь API');
+      }
+      final request = http.Request(method, uri)
         ..followRedirects = false
         ..headers.addAll({
           if (token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -97,7 +104,14 @@ class UsityApi {
           503 when path.startsWith('/auth/') => 'Почта временно недоступна.',
           _ => 'Сервер недоступен. Повторите позже.',
         };
-        throw ApiException(response.statusCode, message);
+        Object? detail;
+        try {
+          final body = jsonDecode(utf8.decode(response.bodyBytes));
+          if (body is Map) detail = body['detail'];
+        } on FormatException {
+          // A proxy may return a non-JSON error; preserve its HTTP status.
+        }
+        throw ApiException(response.statusCode, message, detail);
       }
       return jsonDecode(utf8.decode(response.bodyBytes));
     } on TimeoutException {
@@ -113,22 +127,22 @@ class UsityApi {
   }
 
   Future<void> requestCode(String email) async =>
-      await _request('POST', '/auth/code', {'email': email});
+      await request('POST', '/auth/code', {'email': email});
   Future<String> verifyCode(String email, String code) async =>
-      (await _request('POST', '/auth/verify', {
+      (await request('POST', '/auth/verify', {
             'email': email,
             'code': code,
           }))['token']
           as String;
   Future<Map<String, dynamic>> account() async =>
-      await _request('GET', '/account');
-  Future<void> logout() async => await _request('POST', '/account/logout');
+      await request('GET', '/account');
+  Future<void> logout() async => await request('POST', '/account/logout');
   Future<Map<String, dynamic>> join(String invite) async =>
-      await _request('POST', '/account/join', {'invite': invite});
+      await request('POST', '/account/join', {'invite': invite});
   Future<Map<String, dynamic>> chooseGroups(Map<String, int> choices) async =>
-      await _request('PUT', '/account/subgroups', {'choices': choices});
+      await request('PUT', '/account/subgroups', {'choices': choices});
   Future<Map<String, dynamic>> createGroup(GroupSetup group) async =>
-      await _request('POST', '/account/group', {
+      await request('POST', '/account/group', {
         'name': group.name.trim(),
         'start': group.start.toIso8601String().substring(0, 10),
         'end': group.end.toIso8601String().substring(0, 10),
@@ -158,17 +172,40 @@ class UsityApi {
         ],
       });
 
-  Future<ScheduleSnapshot> loadSchedule() async {
-    final me = await _request('GET', '/me');
+  Future<List<Map<String, dynamic>>> fetchTasks() async =>
+      (await request('GET', '/account/tasks') as List)
+          .cast<Map<String, dynamic>>();
+
+  Future<Map<String, dynamic>> putTask(
+    String id,
+    Map<String, dynamic> body,
+  ) async => await request('PUT', '/account/tasks/$id', body);
+
+  Future<Map<String, dynamic>> fetchSchedule({
+    bool includeCompleted = false,
+  }) async {
+    final me = await request('GET', '/me');
     final group = me['group_id'] as String;
     final results = await Future.wait([
-      _request('GET', '/groups/$group/lessons'),
-      _request('GET', '/groups/$group/assignments'),
+      request('GET', '/groups/$group/lessons'),
+      request(
+        'GET',
+        '/groups/$group/assignments${includeCompleted ? '?include_completed=true' : ''}',
+      ),
     ]);
-    final assignments = results[1] as List;
+    return {'me': me, 'lessons': results[0], 'assignments': results[1]};
+  }
+
+  Future<ScheduleSnapshot> loadSchedule() async =>
+      decodeSchedule(await fetchSchedule());
+
+  static ScheduleSnapshot decodeSchedule(Map<String, dynamic> data) {
+    final me = data['me'];
+    final group = me['group_id'] as String;
+    final assignments = data['assignments'] as List;
     String time(DateTime date) =>
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-    final lessons = (results[0] as List).map((j) {
+    final lessons = (data['lessons'] as List).map((j) {
       final start = DateTime.parse(j['starts_at'] as String).toLocal();
       final end = DateTime.parse(j['ends_at'] as String).toLocal();
       return LessonOccurrence(
@@ -188,6 +225,7 @@ class UsityApi {
                 id: a['id'] as String,
                 text: a['text'] as String,
                 version: a['version'] as int,
+                completed: a['completed'] as bool? ?? false,
               ),
             )
             .toList(),
@@ -203,7 +241,7 @@ class UsityApi {
   }
 
   Future<List<ReviewDraft>> loadReview(String groupId) async =>
-      (await _request('GET', '/groups/$groupId/review') as List)
+      (await request('GET', '/groups/$groupId/review') as List)
           .map((j) => ReviewDraft.fromJson(j as Map<String, dynamic>))
           .toList();
 
@@ -216,7 +254,7 @@ class UsityApi {
     String? lessonId,
     List<int> subgroups = const [],
   }) async {
-    await _request('POST', '/groups/$groupId/review/$draftId/decision', {
+    await request('POST', '/groups/$groupId/review/$draftId/decision', {
       'action': approve ? 'approve' : 'reject',
       'expected_version': version,
       if (approve) ...{'text': text, 'lesson_id': lessonId},
@@ -224,11 +262,15 @@ class UsityApi {
     });
   }
 
-  Future<void> complete(String groupId, HomeworkItem homework) async {
-    await _request(
+  Future<void> complete(
+    String groupId,
+    HomeworkItem homework, {
+    bool completed = true,
+  }) async {
+    await request(
       'PUT',
       '/groups/$groupId/assignments/${homework.id}/completion',
-      {'version': homework.version, 'completed': true},
+      {'version': homework.version, 'completed': completed},
     );
   }
 }

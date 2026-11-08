@@ -1,5 +1,11 @@
 class HomeworkItem {
-  const HomeworkItem({required this.text, this.id = '', this.version = 1});
+  const HomeworkItem({
+    required this.text,
+    this.id = '',
+    this.version = 1,
+    this.completed = false,
+  });
+  final bool completed;
   final String id;
   final String text;
   final int version;
