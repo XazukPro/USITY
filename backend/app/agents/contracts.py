@@ -1,7 +1,8 @@
 """Shared, read-only contracts for the five independent AI agents."""
 
-from dataclasses import dataclass, field
-from typing import Any, Mapping
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -96,7 +97,7 @@ class AgentRun:
     @classmethod
     def not_found(
         cls, agent_id: str, model_version: str, prompt_version: str, raw_output: str | None = None
-    ) -> "AgentRun":
+    ) -> AgentRun:
         return cls(
             agent_id=agent_id,
             status="not_found",
@@ -106,7 +107,7 @@ class AgentRun:
         )
 
     @classmethod
-    def failed(cls, agent_id: str, error: str) -> "AgentRun":
+    def failed(cls, agent_id: str, error: str) -> AgentRun:
         return cls(agent_id=agent_id, status="error", error=error)
 
     def validate(self, bundle: EventBundle) -> None:

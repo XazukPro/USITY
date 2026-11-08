@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from app.agents.contracts import AgentProposal as CommonProposal
-from app.agents.contracts import AgentRun, EventBundle as CommonEventBundle
+from app.agents.contracts import AgentRun
+from app.agents.contracts import EventBundle as CommonEventBundle
 
 
 @dataclass(frozen=True)

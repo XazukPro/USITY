@@ -86,6 +86,7 @@ def create_app(database_url):
                     "model_output",
                     "model_version",
                     "prompt_version",
+                    "proposal_set",
                 )
             }
             for row in db.scalars(

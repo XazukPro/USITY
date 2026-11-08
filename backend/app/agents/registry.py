@@ -1,9 +1,9 @@
 """Registry that runs all five agents independently on the same trusted bundle."""
 
-from typing import Protocol, Sequence
+from collections.abc import Sequence
+from typing import Protocol
 
 from app.agents.contracts import AgentRun, EventBundle
-
 
 AGENT_IDS = (
     "homework_detection",
