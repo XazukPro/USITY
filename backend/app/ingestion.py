@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.contracts import EventBundle
 from app.agents.homework import detect_homework
-from app.agents.registry import run_all_agents
+from app.agents.registry import build_default_agents, run_all_agents
 from app.models import Draft, IngestedEvent, TelegramIntegration
 
 PROMPT_VERSION = "homework-v1"
@@ -201,3 +201,12 @@ def ingest_event_bundle(engine, event_id, bundle: EventBundle, agents):
             if existing:
                 return previous_result(existing, fingerprint)
         raise
+
+
+def ingest_default_event_bundle(engine, event_id, bundle: EventBundle, provider, now):
+    """Trusted worker entry point for the standard five-agent configuration."""
+    return ingest_event_bundle(
+        engine, event_id, bundle, build_default_agents(provider, now)
+    )
+
+

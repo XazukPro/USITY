@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.contracts import AgentRun, EventBundle, SourceMessage
 from app.agents.registry import AGENT_IDS
-from app.ingestion import ingest_event_bundle
+from app.ingestion import ingest_default_event_bundle, ingest_event_bundle
 from app.models import Draft, TelegramIntegration
 
 
@@ -16,6 +16,21 @@ class FixedAgent:
         if self.fail:
             raise RuntimeError("provider unavailable")
         return AgentRun.not_found(self.agent_id, "fake-v1", "prompt-v1")
+
+
+class DefaultProvider:
+    model_name = "fake-v1"
+
+    def complete(self, system_prompt, event_json):
+        if "НОВОЕ домашнее" in system_prompt:
+            return '{"kind":"none","text":null,"source_ids":[],"uncertain":false}'
+        if "привязываешь" in system_prompt:
+            return '{"subject_mention":null,"subgroup_mentions":null,"deadline_kind":"none","deadline_date":null,"source_ids":[1]}'
+        if "дубли" in system_prompt:
+            return '{"duplicates":[]}'
+        if "учебные материалы" in system_prompt:
+            return '{"materials":[]}'
+        return '{"changes":[]}'
 
 
 def test_five_agent_bundle_creates_one_pending_review_draft(setup):
@@ -82,4 +97,23 @@ def test_one_agent_failure_is_visible_without_losing_other_runs(setup):
     runs = {item["agent_id"]: item for item in draft["proposal_set"]["runs"]}
     assert runs["material_proposal"]["status"] == "error"
     assert runs["assignment_change"]["status"] == "not_found"
+
+
+def test_default_worker_entrypoint_runs_real_agent_registry(setup):
+    s = setup
+    with s["engine"].begin() as db:
+        db.execute(
+            TelegramIntegration.__table__.insert(),
+            {"group_id": s["group"], "chat_id": "-100123", "topic_id": "42"},
+        )
+    bundle = EventBundle(
+        s["group"], "-100123", "42", "-100123", "42",
+        (SourceMessage(1, "-100123", "42", "Текст", "2026-11-08T10:00:00+03:00"),),
+    )
+
+    draft_id = ingest_default_event_bundle(
+        s["engine"], "default-entry", bundle, DefaultProvider(), "2026-11-08T12:00:00+03:00"
+    )
+
+    assert draft_id
 
