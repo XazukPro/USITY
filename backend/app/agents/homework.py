@@ -2,6 +2,9 @@ import json
 from dataclasses import dataclass
 from typing import Protocol
 
+from app.agents.contracts import AgentProposal as CommonProposal
+from app.agents.contracts import AgentRun, EventBundle as CommonEventBundle
+
 
 @dataclass(frozen=True)
 class Message:
@@ -40,6 +43,18 @@ SYSTEM_PROMPT = """Ты обнаруживаешь только НОВОЕ до�
 Если нет основания для нового ДЗ, верни kind=none. Если сомневаешься, поставь uncertain=true.
 Ответь только JSON-объектом с полями kind (new_homework или none), text (строка или null),
 source_ids (массив целых ID), uncertain (boolean). Не выдумывай ID или содержание."""
+
+PROMPT_VERSION = "homework-v1"
+
+
+class _RecordingProvider:
+    def __init__(self, delegate: LlmProvider):
+        self.delegate = delegate
+        self.raw: str | None = None
+
+    def complete(self, system_prompt: str, event_json: str) -> str:
+        self.raw = self.delegate.complete(system_prompt, event_json)
+        return self.raw
 
 
 def detect_homework(bundle: EventBundle, llm: LlmProvider) -> AgentProposal | None:
@@ -91,4 +106,44 @@ def detect_homework(bundle: EventBundle, llm: LlmProvider) -> AgentProposal | No
         text=text.strip(),
         source_ids=tuple(source_ids),
         uncertain=uncertain,
+    )
+
+
+def run_homework_detection(
+    bundle: CommonEventBundle, llm: LlmProvider
+) -> AgentRun:
+    """Adapt the legacy detector to the common five-agent contract."""
+    bundle.validate_source()
+    recorder = _RecordingProvider(llm)
+    proposal = detect_homework(
+        EventBundle(
+            group_id=bundle.group_id,
+            topic_id=bundle.topic_id,
+            messages=tuple(
+                Message(message.id, message.text, message.sent_at)
+                for message in bundle.messages
+            ),
+        ),
+        recorder,
+    )
+    model_version = getattr(llm, "model_name", "unknown")
+    if proposal is None:
+        return AgentRun.not_found(
+            "homework_detection", model_version, PROMPT_VERSION, recorder.raw
+        )
+    common_proposal = CommonProposal(
+        agent_id="homework_detection",
+        proposal_type="new_homework",
+        source_ids=proposal.source_ids,
+        fields={"text": proposal.text, "uncertain": proposal.uncertain},
+        reason="Модель обнаружила новое домашнее задание в указанных сообщениях.",
+        uncertainty=("model_uncertain",) if proposal.uncertain else (),
+    )
+    return AgentRun(
+        agent_id="homework_detection",
+        status="proposed",
+        proposals=(common_proposal,),
+        raw_output=recorder.raw,
+        model_version=model_version,
+        prompt_version=PROMPT_VERSION,
     )
