@@ -20,23 +20,38 @@ class ScheduleSnapshot {
   final List<LessonOccurrence> lessons;
 }
 
+class ReviewAgentRun {
+  const ReviewAgentRun(this.id, this.status);
+  final String id;
+  final String status;
+  factory ReviewAgentRun.fromJson(Map<String, dynamic> json) => ReviewAgentRun(
+    json['agent_id'] as String,
+    json['status'] as String,
+  );
+}
+
 class ReviewDraft {
   const ReviewDraft({
     required this.id,
     required this.text,
     required this.version,
     required this.messages,
+    this.agents = const [],
   });
   final String id;
   final String text;
   final int version;
   final List<String> messages;
+  final List<ReviewAgentRun> agents;
   factory ReviewDraft.fromJson(Map<String, dynamic> json) => ReviewDraft(
     id: json['id'] as String,
     text: json['text'] as String,
     version: json['version'] as int,
     messages: (json['source_context']['messages'] as List)
         .map((m) => m['text'] as String)
+        .toList(),
+    agents: ((json['proposal_set']?['runs'] as List?) ?? const [])
+        .map((run) => ReviewAgentRun.fromJson(run as Map<String, dynamic>))
         .toList(),
   );
 }
