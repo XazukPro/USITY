@@ -15,6 +15,7 @@ from app.group_access import (
     subject_group_counts,
 )
 from app.mail_codes import LoginMail
+from app.material_library import install_material_library
 from app.models import (
     Assignment,
     AssignmentSubgroup,
@@ -56,6 +57,7 @@ def create_app(database_url, *, login_mail=None):
         return authenticate(db, authorization)
 
     Member = Annotated[object, Depends(current_member)]
+    install_material_library(app, DB, Member)
 
     @app.get("/me")
     def profile(db: DB, member: Member):
@@ -207,7 +209,9 @@ def create_app(database_url, *, login_mail=None):
         return {"status": status, "assignment_id": assignment_id}
 
     @app.get("/groups/{group_id}/assignments")
-    def assignments(group_id: str, db: DB, member: Member):
+    def assignments(
+        group_id: str, db: DB, member: Member, include_completed: bool = False
+    ):
         require_group(member, group_id)
         completed = exists().where(
             Completion.assignment_id == Assignment.id,
@@ -215,19 +219,22 @@ def create_app(database_url, *, login_mail=None):
             Completion.version == Assignment.version,
             Completion.completed.is_(True),
         )
-        rows = db.scalars(
-            select(Assignment)
-            .where(
-                Assignment.group_id == group_id,
-                Assignment.lesson_id.in_(allowed_lessons(member)),
-                audience_visible_to(member),
-                ~completed,
-            )
-            .order_by(Assignment.id)
+        query = select(Assignment, completed.label("completed")).where(
+            Assignment.group_id == group_id,
+            Assignment.lesson_id.in_(allowed_lessons(member)),
+            audience_visible_to(member),
         )
+        if not include_completed:
+            query = query.where(~completed)
         return [
-            {key: getattr(row, key) for key in ("id", "lesson_id", "text", "version")}
-            for row in rows
+            {
+                "id": row.id,
+                "lesson_id": row.lesson_id,
+                "text": row.text,
+                "version": row.version,
+                **({"completed": done} if include_completed else {}),
+            }
+            for row, done in db.execute(query.order_by(Assignment.id))
         ]
 
     @app.put("/groups/{group_id}/assignments/{assignment_id}/completion")

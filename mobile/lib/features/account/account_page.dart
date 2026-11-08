@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,8 @@ import '../../data/usity_api.dart';
 import '../../domain/group_setup.dart';
 import '../../theme/tokens.dart';
 import '../onboarding/owner_wizard.dart';
-import '../schedule/live_home_page.dart';
+import '../schedule/account_planner_page.dart';
+import '../materials/live_materials.dart';
 
 String? invitationToken(String text) {
   final uri = Uri.tryParse(text.trim());
@@ -74,11 +76,24 @@ class _AccountState extends State<AccountPage> {
       if (token != null) {
         api.close();
         api = client(token);
-        profile = await api.account();
+        profile = await loadProfile();
       }
     } on ApiException catch (e) {
       if (e.status == 401) {
         await clear();
+      } else if (e.status == 0) {
+        final saved = await storage.read(key: '$key.profile');
+        final cached = saved == null ? null : jsonDecode(saved);
+        final expiry = DateTime.tryParse(
+          cached?['profile']?['session_expires_at'] ?? '',
+        );
+        if (cached?['token'] == api.token &&
+            expiry != null &&
+            expiry.isAfter(DateTime.now())) {
+          profile = Map<String, dynamic>.from(cached['profile']);
+        } else {
+          problem = 'Подключитесь к сети для проверки аккаунта.';
+        }
       } else {
         problem = e.message;
       }
@@ -88,7 +103,19 @@ class _AccountState extends State<AccountPage> {
     if (mounted) setState(() => busy = false);
   }
 
+  Future<Map<String, dynamic>> loadProfile() async {
+    final data = await api.account();
+    // Invite tokens are only needed when connected; cache the offline identity.
+    final offline = Map.of(data)..remove('invite_url');
+    await storage.write(
+      key: '$key.profile',
+      value: jsonEncode({'token': api.token, 'profile': offline}),
+    );
+    return data;
+  }
+
   Future<void> clear() async {
+    final accountId = profile?['user_id'] as String?;
     api.close();
     api = client('');
     profile = null;
@@ -96,6 +123,8 @@ class _AccountState extends State<AccountPage> {
     draft = null;
     code.clear();
     await storage.delete(key: key);
+    await storage.delete(key: '$key.profile');
+    if (accountId != null) await LiveMaterials.purgeCache(api.base, accountId);
   }
 
   Future<void> run(Future<void> Function() action) async {
@@ -140,7 +169,7 @@ class _AccountState extends State<AccountPage> {
     api.close();
     api = client(token);
     code.clear();
-    profile = await api.account();
+    profile = await loadProfile();
   }
 
   Future<void> create() async {
@@ -152,8 +181,11 @@ class _AccountState extends State<AccountPage> {
     );
     if (!mounted || draft == null) return;
     // A timed-out POST may have committed. Reconcile before retry.
-    profile = await api.account();
-    if (profile!['group_id'] == null) profile = await api.createGroup(draft!);
+    profile = await loadProfile();
+    if (profile!['group_id'] == null) {
+      await api.createGroup(draft!);
+      profile = await loadProfile();
+    }
     draft = null;
   }
 
@@ -163,8 +195,11 @@ class _AccountState extends State<AccountPage> {
       problem = 'Вставьте полную ссылку USITY.';
       return;
     }
-    profile = await api.account();
-    if (profile!['group_id'] == null) profile = await api.join(token);
+    profile = await loadProfile();
+    if (profile!['group_id'] == null) {
+      await api.join(token);
+      profile = await loadProfile();
+    }
     invitation.clear();
   }
 
@@ -208,7 +243,10 @@ class _AccountState extends State<AccountPage> {
         ),
       ),
     );
-    if (result != null && mounted) profile = await api.chooseGroups(result);
+    if (result != null && mounted) {
+      await api.chooseGroups(result);
+      profile = await loadProfile();
+    }
   }
 
   @override
@@ -279,7 +317,7 @@ class _AccountState extends State<AccountPage> {
               if (!busy)
                 button(
                   'Загрузить профиль',
-                  () async => profile = await api.account(),
+                  () async => profile = await loadProfile(),
                 ),
             ] else ...[
               Text(
@@ -319,12 +357,18 @@ class _AccountState extends State<AccountPage> {
                 const SizedBox(height: Metrics.space3),
                 button('Открыть расписание', () async {
                   final scheduleApi = client(api.token);
-                  await Navigator.push<void>(
+                  final denied = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => LiveHomePage(api: scheduleApi),
+                      builder: (_) =>
+                          AccountPlannerPage(api: scheduleApi, profile: data),
                     ),
                   );
+                  if (denied == true) {
+                    profile = null;
+                    await storage.delete(key: '$key.profile');
+                    profile = await loadProfile();
+                  }
                 }),
                 if (data['role'] == 'student' &&
                     (data['subjects'] as List).isNotEmpty)

@@ -19,6 +19,7 @@ from app.models import (
     SubjectChoice,
     utc_now,
 )
+from app.personal_tasks import install_personal_tasks
 from app.schemas import InputModel
 
 
@@ -61,6 +62,7 @@ def install_accounts(app, DB, mail):
         return session
 
     Identity = Annotated[AccountSession, Depends(identity)]
+    install_personal_tasks(app, DB, Identity)
 
     def invite(details):
         raw = f"invite:{details.group_id}:{details.invite_nonce}"
@@ -74,6 +76,7 @@ def install_accounts(app, DB, mail):
             "email": db.get(Account, uid).email,
             "group_id": member.group_id if member else None,
             "group_name": details.name if details else None,
+            "subject_names": [s["name"] for s in details.semester["subjects"]] if details else [],
             "role": member.role if member else None,
             "subjects": [
                 {"name": s["name"], "groups": s["groups"]}
@@ -119,7 +122,7 @@ def install_accounts(app, DB, mail):
 
     @app.get("/account")
     def account(db: DB, session: Identity):
-        return profile(db, session.user_id)
+        return {**profile(db, session.user_id), "session_expires_at": session.expires_at}
 
     @app.post("/account/logout")
     def logout(db: DB, session: Identity):

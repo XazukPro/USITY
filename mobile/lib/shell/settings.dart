@@ -42,11 +42,17 @@ class SettingsPage extends StatelessWidget {
     this.onExit,
     this.group,
     this.onCreateGroup,
+    this.profileLabel,
+    this.roleLabel,
+    this.onAccount,
+    this.onRefresh,
   });
   final VoidCallback? onReview, onExit;
   final DemoPlan? plan;
   final GroupSetup? group;
   final VoidCallback? onCreateGroup;
+  final String? profileLabel, roleLabel;
+  final VoidCallback? onAccount, onRefresh;
   final int pending;
 
   Future<void> _theme(BuildContext context, ThemePreference? pref) async {
@@ -219,7 +225,7 @@ class SettingsPage extends StatelessWidget {
                     Text(
                       isDemo
                           ? (this.group == null ? 'Алексей Петров' : 'Вы')
-                          : 'Учебный профиль',
+                          : profileLabel ?? 'Учебный профиль',
                       style: TypeScale.heading,
                     ),
                     Text(
@@ -227,9 +233,10 @@ class SettingsPage extends StatelessWidget {
                           ? (this.group == null
                                 ? 'Студент · демогруппа'
                                 : 'Староста · 1 участник')
-                          : onReview == null
-                          ? 'Студент'
-                          : 'Администратор',
+                          : roleLabel ??
+                                (onReview == null
+                                    ? 'Студент'
+                                    : 'Администратор'),
                       style: TypeScale.callout,
                     ),
                   ],
@@ -239,6 +246,13 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Metrics.space4),
+        if (onAccount != null || onRefresh != null)
+          group([
+            if (onAccount != null)
+              row(Icons.person_outline, 'Аккаунт и подгруппы', tap: onAccount),
+            if (onRefresh != null)
+              row(Icons.sync, 'Синхронизировать', tap: onRefresh),
+          ]),
         if (this.group case final owner?)
           group([
             ListTile(

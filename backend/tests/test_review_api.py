@@ -62,6 +62,37 @@ def test_only_human_approval_publishes_and_survives_restart(setup):
         assert row["decided_by"] == s["users"]["admin"]
 
 
+def test_full_schedule_keeps_personal_completion_and_resets_on_revision(setup):
+    s = setup
+    aid = decide(s).json()["assignment_id"]
+    path = f"/groups/{s['group']}/assignments"
+    assert (
+        s["client"]
+        .put(
+            path + f"/{aid}/completion",
+            headers=headers(s, "student"),
+            json={"version": 1, "completed": True},
+        )
+        .is_success
+    )
+
+    def full(who):
+        return (
+            s["client"]
+            .get(path, params={"include_completed": True}, headers=headers(s, who))
+            .json()
+        )
+
+    assert assignments(s, "student") == []
+    assert full("student")[0]["completed"] is True
+    assert full("student2")[0]["completed"] is False
+    with s["engine"].begin() as db:
+        db.execute(
+            Assignment.__table__.update().where(Assignment.id == aid).values(version=2)
+        )
+    assert full("student")[0]["completed"] is False
+
+
 def test_reject_does_not_publish_and_cannot_be_approved_later(setup):
     assert decide(setup, "reject").status_code == 200
     assert decide(setup).status_code == 409

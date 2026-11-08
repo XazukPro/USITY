@@ -21,7 +21,8 @@ enum _Filter {
 typedef _TimedCard = ({int minute, int order, Widget card});
 
 class DemoTasks extends StatefulWidget {
-  const DemoTasks({super.key, required this.plan});
+  const DemoTasks({super.key, required this.plan, this.onMaterials});
+  final ValueChanged<String>? onMaterials;
   final DemoPlan plan;
   @override
   State<DemoTasks> createState() => _TasksState();
@@ -81,7 +82,11 @@ class _TasksState extends State<DemoTasks> {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute<void>(
-                  builder: (_) => LessonDetail(lesson: lesson, plan: plan),
+                  builder: (_) => LessonDetail(
+                    lesson: lesson,
+                    plan: plan,
+                    onMaterials: widget.onMaterials,
+                  ),
                 ),
               ),
             ),
