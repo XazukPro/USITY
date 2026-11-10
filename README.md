@@ -10,6 +10,7 @@
 - [Спецификация MVP](docs/product/mvp.md)
 - [Правила разработки](AGENTS.md)
 - [Окружение разработки](docs/development/environment.md)
+- [Работа команды в GitHub](docs/development/github-workflow.md)
 - [Заметки по AI-материалам курса](docs/research/ai-course-notes-ru.md)
 - [Лицензия MIT](LICENSE)
 
