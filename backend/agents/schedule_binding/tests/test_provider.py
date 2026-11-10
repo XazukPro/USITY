@@ -74,14 +74,12 @@ class ProviderTests(unittest.TestCase):
         token = {"access_token": "temporary", "expires_at": time.time() + 1800}
         with patch("backend.agents.schedule_binding.provider.urllib.request.urlopen", side_effect=[
             response(token), response({"choices": [{"finish_reason": "blacklist", "message": {"content": ""}}]}),
-        ]):
-            with self.assertRaises(ProviderError):
-                GigaChatModel("dummy-key").extract({})
+        ]), self.assertRaises(ProviderError):
+            GigaChatModel("dummy-key").extract({})
         with patch("backend.agents.schedule_binding.provider.urllib.request.urlopen", side_effect=[
             response(token), response({"choices": []}),
-        ]):
-            with self.assertRaises(ProviderError):
-                GigaChatModel("dummy-key").extract({})
+        ]), self.assertRaises(ProviderError):
+            GigaChatModel("dummy-key").extract({})
 
 
 if __name__ == "__main__":

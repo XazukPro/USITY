@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 
 from backend.agents.schedule_binding import bind_schedule
 
-
 NOW = datetime(2026, 9, 7, 9, 0, tzinfo=ZoneInfo("Europe/Moscow"))
 
 

@@ -1,0 +1,19 @@
+{
+  "schema_version": "0.1",
+  "event_id": "evt-demo-change-1",
+  "group_id": "group-demo-1",
+  "source": {"platform": "telegram", "chat_id": "-100123", "topic_id": "42"},
+  "messages": [
+    {"id": "201", "sent_at": "2026-11-04T18:10:00+03:00", "text": "Ребята, по матану поправка: не номера 4 и 5, а 4, 5 и 7", "attachments": []}
+  ],
+  "context": {
+    "subjects": [
+      {"id": "subject-math", "name": "Математический анализ", "aliases": ["матан"]},
+      {"id": "subject-physics", "name": "Физика", "aliases": ["физика"]}
+    ],
+    "active_assignments": [
+      {"id": "asg-math-1", "subject_id": "subject-math", "text": "Решить номера 4 и 5", "due_at": "2026-11-09T11:00:00+03:00"},
+      {"id": "asg-phys-1", "subject_id": "subject-physics", "text": "Лабораторная 3: оформить отчёт", "due_at": "2026-11-13T10:00:00+03:00"}
+    ]
+  }
+}

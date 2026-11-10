@@ -9,7 +9,6 @@ from zoneinfo import ZoneInfo
 from .agent import bind_schedule
 from .provider import PROMPT_VERSION, GigaChatModel
 
-
 NOW = datetime(2026, 9, 7, 9, 0, tzinfo=ZoneInfo("Europe/Moscow"))
 
 
