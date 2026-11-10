@@ -117,6 +117,7 @@ class Draft(Base):
     raw_output: Mapped[str | None] = mapped_column(Text, nullable=True)
     model_version: Mapped[str] = mapped_column(String(200))
     prompt_version: Mapped[str] = mapped_column(String(100))
+    proposal_set: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utc_now)

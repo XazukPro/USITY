@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import inspect
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 from sqlalchemy.schema import CreateSchema, DropSchema
@@ -71,6 +72,22 @@ def test_upgrades_existing_groups_without_losing_data(database_url):
             db.exec_driver_sql("SELECT id FROM study_groups").scalar_one() == "existing"
         )
         assert db.exec_driver_sql("SELECT count(*) FROM usity_schema").scalar_one() >= 3
+        assert "proposal_set" in {
+            column["name"] for column in inspect(db).get_columns("review_drafts")
+        }
+    engine.dispose()
+
+
+def test_migration_accepts_existing_agent_column(database_url):
+    import app.models  # noqa: F401
+    from app.db import Base
+    engine = make_engine(database_url)
+    Base.metadata.create_all(engine)
+    migrate(database_url)
+    migrate(database_url)
+    with engine.connect() as db:
+        columns = inspect(db).get_columns("review_drafts")
+        assert sum(column["name"] == "proposal_set" for column in columns) == 1
     engine.dispose()
 
 

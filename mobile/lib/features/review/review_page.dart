@@ -3,6 +3,15 @@ import 'package:flutter/material.dart';
 import '../../data/usity_api.dart';
 import '../../domain/schedule.dart';
 
+String agentLabel(String id) => switch (id) {
+  'homework_detection' => 'Новое ДЗ',
+  'schedule_binding' => 'Привязка к расписанию',
+  'duplicate_conflict' => 'Дубли и противоречия',
+  'material_proposal' => 'Учебные материалы',
+  'assignment_change' => 'Изменения и отмены',
+  _ => id,
+};
+
 class ReviewPage extends StatefulWidget {
   const ReviewPage({
     super.key,
@@ -203,6 +212,30 @@ class _ReviewEditorState extends State<ReviewEditor> {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 12),
+            if (widget.draft.agents.isNotEmpty) ...[
+              Text(
+                '${widget.draft.agents.length} AI-агентов',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final agent in widget.draft.agents)
+                    Chip(
+                      label: Text(agentLabel(agent.id)),
+                      avatar: Icon(
+                        agent.status == 'error'
+                            ? Icons.error_outline
+                            : Icons.auto_awesome_outlined,
+                        size: 18,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

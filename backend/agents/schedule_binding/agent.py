@@ -8,11 +8,9 @@
 import re
 import unicodedata
 from datetime import date, datetime, time, timedelta
-from typing import Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 from .provider import PROMPT_VERSION, SemanticModel
-
 
 AGENT_ID = "schedule_binding"
 _TOKEN = re.compile(r"[\w]+", re.UNICODE)
@@ -128,7 +126,7 @@ def _read_model_output(raw: str, valid_ids: set) -> dict:
     return data
 
 
-def _subject_candidates(bundle: dict, mention: Optional[str], evidence: str) -> List[str]:
+def _subject_candidates(bundle: dict, mention: str | None, evidence: str) -> list[str]:
     if not mention or not _mentioned(mention, evidence):
         return []
     candidates = []
@@ -139,7 +137,7 @@ def _subject_candidates(bundle: dict, mention: Optional[str], evidence: str) -> 
     return sorted(candidates)
 
 
-def _subgroups(bundle: dict, mentions: Optional[List[str]], evidence: str, subject_id: str):
+def _subgroups(bundle: dict, mentions: list[str] | None, evidence: str, subject_id: str):
     if mentions is None:
         return None, []
     if not mentions:
@@ -158,10 +156,10 @@ def _subgroups(bundle: dict, mentions: Optional[List[str]], evidence: str, subje
     return sorted(found) if not unknown else None, unknown
 
 
-def _occurrences(bundle: dict, from_date: date, through_date: date) -> List[dict]:
+def _occurrences(bundle: dict, from_date: date, through_date: date) -> list[dict]:
     semester = bundle["semester"]
     start, end = _iso_date(semester["start"]), _iso_date(semester["end"])
-    overrides: Dict[tuple, dict] = {}
+    overrides: dict[tuple, dict] = {}
     for item in bundle.get("overrides", []):
         key = (item["pattern_id"], item["original_date"])
         if key in overrides:

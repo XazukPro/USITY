@@ -145,4 +145,36 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets('review editor shows all five AI-agent results', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReviewEditor(
+          api: UsityApi(baseUrl: 'https://example.test', token: 'test'),
+          groupId: 'g',
+          draft: const ReviewDraft(
+            id: 'd',
+            text: 'Черновики',
+            version: 1,
+            messages: [],
+            agents: [
+              ReviewAgentRun('homework_detection', 'proposed'),
+              ReviewAgentRun('schedule_binding', 'proposed'),
+              ReviewAgentRun('duplicate_conflict', 'not_found'),
+              ReviewAgentRun('material_proposal', 'not_found'),
+              ReviewAgentRun('assignment_change', 'not_found'),
+            ],
+          ),
+          lessons: const [],
+        ),
+      ),
+    );
+
+    expect(find.text('5 AI-агентов'), findsOneWidget);
+    expect(find.text('Новое ДЗ'), findsOneWidget);
+    expect(find.text('Привязка к расписанию'), findsOneWidget);
+    expect(find.text('Дубли и противоречия'), findsOneWidget);
+    expect(find.text('Учебные материалы'), findsOneWidget);
+    expect(find.text('Изменения и отмены'), findsOneWidget);
+  });
 }

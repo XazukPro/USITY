@@ -9,7 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.agents.contracts import EventBundle
 from app.agents.homework import detect_homework
+from app.agents.registry import build_default_agents, run_all_agents
 from app.models import Draft, IngestedEvent, TelegramIntegration
 
 PROMPT_VERSION = "homework-v1"
@@ -127,3 +129,84 @@ def ingest_homework(engine, event_id, chat_id, bundle, provider, model_version):
             if existing:
                 return previous_result(existing, fingerprint)
         raise
+
+
+def _run_json(run):
+    return {
+        "agent_id": run.agent_id,
+        "status": run.status,
+        "raw_output": run.raw_output,
+        "model_version": run.model_version,
+        "prompt_version": run.prompt_version,
+        "error": run.error,
+        "proposals": [
+            {
+                "proposal_type": proposal.proposal_type,
+                "source_ids": list(proposal.source_ids),
+                "fields": dict(proposal.fields),
+                "reason": proposal.reason,
+                "uncertainty": list(proposal.uncertainty),
+            }
+            for proposal in run.proposals
+        ],
+    }
+
+
+def ingest_event_bundle(engine, event_id, bundle: EventBundle, agents):
+    """Store all five independent results as one pending, human-reviewed draft."""
+    if not event_id or len(event_id) > 200:
+        raise ValueError("Нужен event_id")
+    bundle.validate_source()
+    context = asdict(bundle)
+    encoded = json.dumps(context, ensure_ascii=False, sort_keys=True)
+    fingerprint = sha256(encoded.encode()).hexdigest()
+    with Session(engine) as db:
+        check_source(db, bundle, bundle.chat_id)
+        existing = db.get(IngestedEvent, (bundle.group_id, event_id))
+        if existing:
+            return previous_result(existing, fingerprint)
+    runs = run_all_agents(bundle, agents)
+    proposal_set = {"schema_version": 1, "runs": [_run_json(run) for run in runs]}
+    try:
+        with Session(engine) as db, db.begin():
+            check_source(db, bundle, bundle.chat_id, lock=True)
+            existing = db.get(IngestedEvent, (bundle.group_id, event_id))
+            if existing:
+                return previous_result(existing, fingerprint)
+            draft = Draft(
+                group_id=bundle.group_id,
+                event_id=event_id,
+                text="Черновики пяти AI-агентов",
+                source_context=json.loads(encoded),
+                model_output={"kind": "five_agent_bundle"},
+                raw_output=None,
+                model_version="multiple",
+                prompt_version="five-agent-v1",
+                proposal_set=proposal_set,
+            )
+            db.add(draft)
+            db.flush()
+            db.add(
+                IngestedEvent(
+                    group_id=bundle.group_id,
+                    event_id=event_id,
+                    payload_hash=fingerprint,
+                    draft_id=draft.id,
+                )
+            )
+            return draft.id
+    except IntegrityError:
+        with Session(engine) as db:
+            existing = db.get(IngestedEvent, (bundle.group_id, event_id))
+            if existing:
+                return previous_result(existing, fingerprint)
+        raise
+
+
+def ingest_default_event_bundle(engine, event_id, bundle: EventBundle, provider, now):
+    """Trusted worker entry point for the standard five-agent configuration."""
+    return ingest_event_bundle(
+        engine, event_id, bundle, build_default_agents(provider, now)
+    )
+
+

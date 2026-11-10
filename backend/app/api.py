@@ -129,6 +129,7 @@ def create_app(database_url, *, login_mail=None):
                     "model_output",
                     "model_version",
                     "prompt_version",
+                    "proposal_set",
                 )
             }
             for row in db.scalars(

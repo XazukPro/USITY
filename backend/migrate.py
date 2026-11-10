@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 
 from app.db import make_engine
 
@@ -23,7 +23,13 @@ def migrate(url):
             for path in sorted(Path(__file__).with_name("migrations").glob("*.sql")):
                 if path.stem in applied:
                     continue
-                for statement in path.read_text().split(";"):
+                statements = path.read_text().split(";")
+                if path.stem == "006_agent_proposals" and any(
+                    column["name"] == "proposal_set"
+                    for column in inspect(conn).get_columns("review_drafts")
+                ):
+                    statements = []
+                for statement in statements:
                     if statement.strip():
                         conn.exec_driver_sql(statement)
                 conn.execute(
