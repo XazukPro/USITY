@@ -12,7 +12,6 @@ from .__main__ import model_from_env
 from .agent import AgentRunError, detect_changes
 from .provider import PROMPT_VERSION
 
-
 NOW = datetime(2026, 11, 4, 19, 0, tzinfo=ZoneInfo("Europe/Moscow"))
 
 BASE = {
@@ -54,7 +53,7 @@ def bundle_for(name, texts):
     data = deepcopy(BASE)
     data["event_id"] = "eval-" + name
     data["messages"] = [
-        {"id": str(300 + i), "sent_at": "2026-11-04T18:{:02d}:00+03:00".format(i), "text": text, "attachments": []}
+        {"id": str(300 + i), "sent_at": f"2026-11-04T18:{i:02d}:00+03:00", "text": text, "attachments": []}
         for i, text in enumerate(texts)
     ]
     return data
@@ -85,7 +84,7 @@ def main():
     summary = {
         "model": model.model_name,
         "prompt_version": PROMPT_VERSION,
-        "dataset": "synthetic, {} cases ({} changes, {} non-changes)".format(len(rows), len(positives), len(negatives)),
+        "dataset": f"synthetic, {len(rows)} cases ({len(positives)} changes, {len(negatives)} non-changes)",
         "errors": sum("error" in r for r in rows),
         "changes_detected": sum(r.get("detected", False) for r in positives),
         "changes_kind_correct": sum(r.get("kind_correct", False) for r in positives),

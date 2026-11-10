@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 
 from backend.agents.assignment_change import AgentRunError, detect_changes
 
-
 NOW = datetime(2026, 11, 4, 19, 0, tzinfo=ZoneInfo("Europe/Moscow"))
 
 

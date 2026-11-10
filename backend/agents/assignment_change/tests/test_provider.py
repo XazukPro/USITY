@@ -44,9 +44,8 @@ class GigaChatProviderTests(unittest.TestCase):
             reply({"access_token": "token-1", "expires_at": 4102444800000}),
             reply({"choices": [{"message": {"content": ""}}]}),
         ]
-        with patch("backend.agents.assignment_change.provider.urllib.request.urlopen", side_effect=answers):
-            with self.assertRaises(ProviderError):
-                GigaChatModel("dummy-credentials").extract({})
+        with patch("backend.agents.assignment_change.provider.urllib.request.urlopen", side_effect=answers), self.assertRaises(ProviderError):
+            GigaChatModel("dummy-credentials").extract({})
 
 
 if __name__ == "__main__":

@@ -1,10 +1,10 @@
 """Проверяет ссылки и метаданные черновика материала без публикации данных."""
 
 import re
+from collections.abc import Mapping
 from pathlib import PurePosixPath
-from typing import Any, Mapping
+from typing import Any
 from urllib.parse import urlsplit
-
 
 MAX_FILE_BYTES = 100_000_000
 
@@ -43,22 +43,22 @@ def _object_id(value: Any) -> bool:
 
 def _id_set(items: Any, label: str) -> set:
     if not isinstance(items, list):
-        raise MaterialValidationError("{}: ожидается список".format(label))
+        raise MaterialValidationError(f"{label}: ожидается список")
     found = set()
     for item in items:
         if not isinstance(item, Mapping) or not _object_id(item.get("id")) or item["id"] in found:
-            raise MaterialValidationError("{}: недопустимый или повторяющийся ID".format(label))
+            raise MaterialValidationError(f"{label}: недопустимый или повторяющийся ID")
         found.add(item["id"])
     return found
 
 
 def _reference_ids(value: Any, allowed: set, label: str, allow_empty: bool) -> list:
     if not isinstance(value, list) or (not allow_empty and not value):
-        raise MaterialValidationError("{}: ожидается непустой список ID".format(label))
+        raise MaterialValidationError(f"{label}: ожидается непустой список ID")
     if any(not _object_id(item) for item in value) or len(value) != len(set(value)):
-        raise MaterialValidationError("{}: недопустимый или повторяющийся ID".format(label))
+        raise MaterialValidationError(f"{label}: недопустимый или повторяющийся ID")
     if not set(value).issubset(allowed):
-        raise MaterialValidationError("{}: ID отсутствует в событии".format(label))
+        raise MaterialValidationError(f"{label}: ID отсутствует в событии")
     return list(value)
 
 

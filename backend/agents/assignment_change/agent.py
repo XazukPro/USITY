@@ -9,10 +9,8 @@ import json
 import re
 import unicodedata
 from datetime import date, datetime
-from typing import List, Optional
 
 from .provider import PROMPT_VERSION, ChangeModel
-
 
 SCHEMA_VERSION = "0.1"
 AGENT_ID = "assignment_change"
@@ -27,7 +25,7 @@ _TOKEN = re.compile(r"\w+", re.UNICODE)
 class AgentRunError(RuntimeError):
     """The model call failed or its answer is unusable; never means "no changes"."""
 
-    def __init__(self, message: str, model_response: Optional[str] = None):
+    def __init__(self, message: str, model_response: str | None = None):
         super().__init__(message)
         self.model_response = model_response
 
@@ -141,7 +139,7 @@ def _parse_change(item, message_ids: set) -> dict:
     return item
 
 
-def _read_model_output(raw: str, message_ids: set) -> List[dict]:
+def _read_model_output(raw: str, message_ids: set) -> list[dict]:
     try:
         data = json.loads(raw)
     except (TypeError, ValueError):
@@ -154,7 +152,7 @@ def _read_model_output(raw: str, message_ids: set) -> List[dict]:
 def _proposal(change: dict, bundle: dict, today: date) -> dict:
     """Turn one model change into a proposal; doubts become review flags, not guesses."""
     known = {a["id"] for a in bundle["context"].get("active_assignments", [])}
-    flags: List[str] = []
+    flags: list[str] = []
     if change["uncertain"]:
         flags.append("model_uncertain")
 

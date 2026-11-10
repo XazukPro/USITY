@@ -29,7 +29,7 @@ def main() -> None:
     except AgentRunError as exc:
         json.dump({"error": str(exc), "model_response": exc.model_response}, sys.stderr, ensure_ascii=False)
         sys.stderr.write("\n")
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     json.dump(result, sys.stdout, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
 

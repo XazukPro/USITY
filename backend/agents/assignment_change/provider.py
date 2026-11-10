@@ -7,8 +7,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-from typing import Optional, Protocol
-
+from typing import Protocol
 
 PROMPT_VERSION = "assignment-change-v1"
 
@@ -80,7 +79,7 @@ class ProviderError(OSError):
 
 class ProviderHttpError(ProviderError):
     def __init__(self, status: int):
-        super().__init__("GigaChat HTTP status {}".format(status))
+        super().__init__(f"GigaChat HTTP status {status}")
         self.status = status
 
 
@@ -91,7 +90,7 @@ class GigaChatModel:
         self,
         credentials: str,
         model_name: str = "GigaChat-2",
-        ca_bundle_file: Optional[str] = None,
+        ca_bundle_file: str | None = None,
         timeout: int = 30,
         chat_url: str = CHAT_URL,
     ):
@@ -104,7 +103,7 @@ class GigaChatModel:
         self.ssl_context = ssl.create_default_context()
         if ca_bundle_file:
             self.ssl_context.load_verify_locations(cafile=ca_bundle_file)
-        self._access_token: Optional[str] = None
+        self._access_token: str | None = None
         self._expires_at = 0.0
 
     def _post_json(self, request: urllib.request.Request) -> dict:
@@ -114,7 +113,7 @@ class GigaChatModel:
         except urllib.error.HTTPError as exc:
             raise ProviderHttpError(exc.code) from None
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-            raise ProviderError("GigaChat request failed: {}".format(type(exc).__name__)) from None
+            raise ProviderError(f"GigaChat request failed: {type(exc).__name__}") from None
         if not isinstance(result, dict):
             raise ProviderError("GigaChat returned an invalid response")
         return result
