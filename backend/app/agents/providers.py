@@ -85,12 +85,23 @@ class GigaChatProvider:
         },
     }
 
-    def __init__(self, credentials, model="GigaChat-2", ca_bundle_file=None, timeout=20):
+    def __init__(
+        self,
+        credentials,
+        model="GigaChat-2",
+        ca_bundle_file=None,
+        timeout=20,
+        *,
+        output_schema=None,
+    ):
         if not credentials or not model or timeout <= 0:
             raise ValueError("credentials, model and positive timeout are required")
         self.credentials = credentials
         self.model = model
         self.timeout = timeout
+        self.output_schema = (
+            self.OUTPUT_SCHEMA if output_schema is None else output_schema
+        )
         self.context = ssl.create_default_context()
         if ca_bundle_file:
             self.context.load_verify_locations(cafile=ca_bundle_file)
@@ -99,7 +110,9 @@ class GigaChatProvider:
 
     def _post(self, request):
         try:
-            with urlopen(request, timeout=self.timeout, context=self.context) as response:
+            with urlopen(
+                request, timeout=self.timeout, context=self.context
+            ) as response:
                 result = json.load(response)
         except HTTPError as exc:
             raise ProviderHttpError(exc.code) from None
@@ -127,8 +140,10 @@ class GigaChatProvider:
         )
         result = self._post(request)
         token, expires_at = result.get("access_token"), result.get("expires_at")
-        if not isinstance(token, str) or not token or not isinstance(
-            expires_at, (int, float)
+        if (
+            not isinstance(token, str)
+            or not token
+            or not isinstance(expires_at, (int, float))
         ):
             raise ModelProviderError("GigaChat OAuth response is invalid")
         self.access_token = token
@@ -144,7 +159,7 @@ class GigaChatProvider:
             ],
             "response_format": {
                 "type": "json_schema",
-                "schema": self.OUTPUT_SCHEMA,
+                "schema": self.output_schema,
                 "strict": True,
             },
         }
