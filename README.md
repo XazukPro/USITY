@@ -13,5 +13,7 @@
 - [Работа команды в GitHub](docs/development/github-workflow.md)
 - [Заметки по AI-материалам курса](docs/research/ai-course-notes-ru.md)
 - [Лицензия MIT](LICENSE)
+- [План разработки MVP](docs/superpowers/plans/2026-11-02-usity-mvp.md)
+- [План агента обнаружения ДЗ Антона](docs/superpowers/plans/2026-11-02-anton-homework-agent.md)
 
 Цель: работающий MVP к 15 декабря 2026 года. Задачи ведем в GitHub Issues; изменения отправляем через небольшие коммиты и pull request.
