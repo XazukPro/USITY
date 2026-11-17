@@ -1,0 +1,1 @@
+ALTER TABLE assignments ADD COLUMN cancelled_at TIMESTAMP WITH TIME ZONE;

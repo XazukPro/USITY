@@ -131,7 +131,7 @@ class HomeworkAgentTests(unittest.TestCase):
         self.assertEqual(run.agent_id, "homework_detection")
         self.assertEqual(run.status, "proposed")
         self.assertEqual(run.model_version, "fake-homework-v1")
-        self.assertEqual(run.prompt_version, "homework-v1")
+        self.assertEqual(run.prompt_version, "homework-v2")
         self.assertEqual(run.proposals[0].source_ids, (101, 102))
         self.assertEqual(run.proposals[0].fields["text"], "Решить номера 4 и 5")
 

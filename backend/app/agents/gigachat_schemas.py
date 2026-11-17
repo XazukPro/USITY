@@ -1,8 +1,5 @@
 """Structured outputs for the five independent agent contracts."""
 
-from app.agents.providers import GigaChatProvider
-
-
 def _object(properties):
     return {"type": "object", "properties": properties,
             "required": list(properties), "additionalProperties": False}
@@ -19,7 +16,12 @@ _sources = _array({"type": "integer"})
 _nullable_strings = {"type": ["array", "null"], "items": _string}
 
 AGENT_SCHEMAS = {
-    "homework_detection": GigaChatProvider.OUTPUT_SCHEMA,
+    "homework_detection": _object({
+        "kind": {"type": "string", "enum": ["new_homework", "incomplete_homework", "none"]},
+        "text": _nullable_string,
+        "source_ids": _sources,
+        "uncertain": _boolean,
+    }),
     "schedule_binding": _object({
         "subject_mention": _nullable_string,
         "subgroup_mentions": _nullable_strings,

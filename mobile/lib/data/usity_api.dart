@@ -30,14 +30,110 @@ class ScheduleSnapshot {
   final List<LessonOccurrence> lessons;
 }
 
+String? _reviewString(Object? value) => value is String ? value : null;
+
+List<T> _reviewList<T>(Object? value) =>
+    value is List ? value.whereType<T>().toList() : <T>[];
+
+Iterable<(int, Map<String, dynamic>)> _reviewObjects(Object? value) sync* {
+  if (value is List) {
+    for (final entry in value.indexed) {
+      if (entry.$2 is Map<String, dynamic>) {
+        yield (entry.$1, entry.$2 as Map<String, dynamic>);
+      }
+    }
+  }
+}
+
+class ReviewSummary {
+  const ReviewSummary({
+    required this.state,
+    this.homework,
+    this.text,
+    this.subject,
+    this.lessonId,
+    this.dueAt,
+    this.subgroups = const [],
+    this.missingFields = const [],
+  });
+  final String state;
+  final bool? homework;
+  final String? text;
+  final String? subject;
+  final String? lessonId;
+  final DateTime? dueAt;
+  final List<int> subgroups;
+  final List<String> missingFields;
+
+  factory ReviewSummary.fromJson(Map<String, dynamic> json) => ReviewSummary(
+    state: _reviewString(json['state']) ?? 'needs_review',
+    homework: json['homework'] is bool ? json['homework'] as bool : null,
+    text: _reviewString(json['text']),
+    subject: _reviewString(json['subject']),
+    lessonId: _reviewString(json['lesson_id']),
+    dueAt: DateTime.tryParse(_reviewString(json['due_at']) ?? ''),
+    subgroups: _reviewList<int>(json['subgroups'])
+        .where((g) => g > 0)
+        .toSet()
+        .toList(),
+    missingFields: _reviewList<String>(json['missing_fields']),
+  );
+}
+
+class ReviewProposal {
+  const ReviewProposal({
+    required this.type,
+    this.fields = const {},
+    this.reason,
+    this.sourceIds = const [],
+    this.uncertainty = const [],
+    this.index,
+    this.decisionStatus,
+  });
+  final String type;
+  final Map<String, dynamic> fields;
+  final String? reason;
+  final List<int> sourceIds;
+  final List<String> uncertainty;
+  final int? index;
+  final String? decisionStatus;
+
+  factory ReviewProposal.fromJson(Map<String, dynamic> json, {int? index}) =>
+      ReviewProposal(
+        index: index,
+        type: _reviewString(json['proposal_type']) ?? 'unknown',
+        fields: json['fields'] is Map<String, dynamic>
+            ? json['fields'] as Map<String, dynamic>
+            : const {},
+        reason: _reviewString(json['reason']),
+        sourceIds: _reviewList<int>(json['source_ids']),
+        uncertainty: _reviewList<String>(json['uncertainty']),
+        decisionStatus: json['decision'] is Map
+            ? _reviewString(json['decision']['status'])
+            : null,
+      );
+}
+
 class ReviewAgentRun {
-  const ReviewAgentRun(this.id, this.status);
+  const ReviewAgentRun(
+    this.id,
+    this.status, {
+    this.proposals = const [],
+    this.index,
+  });
   final String id;
   final String status;
-  factory ReviewAgentRun.fromJson(Map<String, dynamic> json) => ReviewAgentRun(
-    json['agent_id'] as String,
-    json['status'] as String,
-  );
+  final List<ReviewProposal> proposals;
+  final int? index;
+  factory ReviewAgentRun.fromJson(Map<String, dynamic> json, {int? index}) =>
+      ReviewAgentRun(
+        _reviewString(json['agent_id']) ?? 'unknown',
+        _reviewString(json['status']) ?? 'unknown',
+        index: index,
+        proposals: _reviewObjects(json['proposals'])
+            .map((entry) => ReviewProposal.fromJson(entry.$2, index: entry.$1))
+            .toList(),
+      );
 }
 
 class ReviewDraft {
@@ -47,23 +143,111 @@ class ReviewDraft {
     required this.version,
     required this.messages,
     this.agents = const [],
+    this.summary,
+    this.proposalSchemaVersion,
+    this.sourceMessages = const [],
+    this.activeAssignments = const [],
   });
   final String id;
   final String text;
   final int version;
   final List<String> messages;
   final List<ReviewAgentRun> agents;
-  factory ReviewDraft.fromJson(Map<String, dynamic> json) => ReviewDraft(
-    id: json['id'] as String,
-    text: json['text'] as String,
-    version: json['version'] as int,
-    messages: (json['source_context']['messages'] as List)
-        .map((m) => m['text'] as String)
-        .toList(),
-    agents: ((json['proposal_set']?['runs'] as List?) ?? const [])
-        .map((run) => ReviewAgentRun.fromJson(run as Map<String, dynamic>))
-        .toList(),
-  );
+  final ReviewSummary? summary;
+  final int? proposalSchemaVersion;
+  final List<Map<String, dynamic>> sourceMessages;
+  final List<Map<String, dynamic>> activeAssignments;
+
+  bool get hasPendingAncillaryProposals => agents
+      .where((agent) => agent.status == 'proposed')
+      .expand((agent) => agent.proposals)
+      .any(
+        (proposal) =>
+            proposal.decisionStatus == null &&
+            [
+              'material',
+              'assignment_change',
+              'duplicate_conflict',
+            ].contains(proposal.type),
+      );
+
+  String? materialUrl(ReviewProposal proposal) {
+    final attachments = sourceMessages
+        .where((m) => proposal.sourceIds.contains(m['id']))
+        .expand((m) => _reviewObjects(m['attachments']).map((a) => a.$2))
+        .where((a) => a['id'] == proposal.fields['attachment_id'])
+        .toList();
+    if (attachments.length != 1 || attachments.single['kind'] != 'link') {
+      return null;
+    }
+    final value = _reviewString(attachments.single['url']);
+    final uri = Uri.tryParse(value ?? '');
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
+      return null;
+    }
+    return value;
+  }
+
+  bool get canPublishHomework {
+    if (summary?.state == 'no_action' || summary?.homework == false) {
+      return false;
+    }
+    if (summary?.homework == true) return true;
+    // Older summaries did not include homework. Explicit non-homework proposals
+    // must still never be sent to the new-assignment decision endpoint.
+    final proposals = agents.expand((agent) => agent.proposals);
+    if (proposals.any((p) => p.type == 'new_homework')) return true;
+    if (proposals.any(
+      (p) => [
+        'material',
+        'assignment_change',
+        'duplicate_conflict',
+      ].contains(p.type),
+    )) {
+      return false;
+    }
+    return true;
+  }
+
+  String get assignmentText => summary == null ? text : summary!.text ?? '';
+
+  factory ReviewDraft.fromJson(Map<String, dynamic> json) {
+    final proposalSet = json['proposal_set'];
+    final data = proposalSet is Map<String, dynamic>
+        ? proposalSet
+        : const <String, dynamic>{};
+    final summary = data['summary'];
+    final context = json['source_context'];
+    final sourceMessages = context is Map
+        ? _reviewObjects(context['messages']).map((m) => m.$2).toList()
+        : <Map<String, dynamic>>[];
+    return ReviewDraft(
+      id: json['id'] as String,
+      text: json['text'] as String,
+      version: json['version'] as int,
+      messages: sourceMessages
+          .map((m) => _reviewString(m['text']) ?? '')
+          .toList(),
+      sourceMessages: sourceMessages,
+      activeAssignments: context is Map
+          ? _reviewObjects(context['active_assignments'])
+                .map((a) => a.$2)
+                .toList()
+          : const [],
+      proposalSchemaVersion: data['schema_version'] is int
+          ? data['schema_version'] as int
+          : null,
+      summary: summary is Map<String, dynamic>
+          ? ReviewSummary.fromJson(summary)
+          : null,
+      agents: _reviewObjects(data['runs'])
+          .map((entry) => ReviewAgentRun.fromJson(entry.$2, index: entry.$1))
+          .toList(),
+    );
+  }
 }
 
 class UsityApi {
@@ -275,6 +459,28 @@ class UsityApi {
       if (approve) ...{'text': text, 'lesson_id': lessonId},
       if (approve && subgroups.isNotEmpty) 'subgroups': subgroups,
     });
+  }
+
+  Future<void> decideProposal({
+    required String groupId,
+    required String draftId,
+    required int version,
+    required int runIndex,
+    required int proposalIndex,
+    required bool approve,
+    String? text,
+    String? lessonId,
+  }) async {
+    await request(
+      'POST',
+      '/groups/$groupId/review/$draftId/proposals/$runIndex/$proposalIndex/decision',
+      {
+        'action': approve ? 'approve' : 'reject',
+        'expected_version': version,
+        if (approve && text != null) 'text': text,
+        if (approve && lessonId != null) 'lesson_id': lessonId,
+      },
+    );
   }
 
   Future<void> complete(

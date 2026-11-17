@@ -170,11 +170,20 @@ void main() {
       ),
     );
 
-    expect(find.text('5 AI-агентов'), findsOneWidget);
-    expect(find.text('Новое ДЗ'), findsOneWidget);
-    expect(find.text('Привязка к расписанию'), findsOneWidget);
-    expect(find.text('Дубли и противоречия'), findsOneWidget);
-    expect(find.text('Учебные материалы'), findsOneWidget);
-    expect(find.text('Изменения и отмены'), findsOneWidget);
+    for (final label in [
+      '5 AI-агентов',
+      'Поиск ДЗ',
+      'Привязка к расписанию',
+      'Дубли и противоречия',
+      'Учебные материалы',
+      'Изменения и отмены',
+    ]) {
+      await tester.scrollUntilVisible(
+        find.text(label),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text(label), findsOneWidget);
+    }
   });
 }

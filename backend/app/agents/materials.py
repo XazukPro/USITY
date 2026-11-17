@@ -36,7 +36,15 @@ def run_material_proposal(bundle: EventBundle, llm: LlmProvider) -> AgentRun:
                 "id": item.id,
                 "text": item.text,
                 "ocr_text": item.ocr_corrected or item.ocr_raw or "",
-                "attachments": [attachment.id for attachment in item.attachments],
+                "attachments": [
+                    {
+                        "id": attachment.id,
+                        "kind": attachment.kind,
+                        "file_name": attachment.file_name,
+                        "url": attachment.url,
+                    }
+                    for attachment in item.attachments
+                ],
             }
             for item in bundle.messages
         ],
@@ -76,8 +84,18 @@ def run_material_proposal(bundle: EventBundle, llm: LlmProvider) -> AgentRun:
             or len(set(source_ids)) != len(source_ids)
             or not set(source_ids).issubset(bundle.message_ids)
             or attachment is None
-            or attachment.size_bytes is None
-            or not 0 < attachment.size_bytes <= MAX_FILE_BYTES
+            or (
+                attachment.kind != "link"
+                and (
+                    attachment.size_bytes is None
+                    or not 0 < attachment.size_bytes <= MAX_FILE_BYTES
+                )
+            )
+            or (attachment.kind == "link" and not attachment.url)
+            or not any(
+                message.id in source_ids and attachment in message.attachments
+                for message in bundle.messages
+            )
         ):
             raise ValueError("attachment or source is invalid")
         if item["category_id"] is not None and item["category_id"] not in category_ids:
@@ -131,4 +149,3 @@ def run_material_proposal(bundle: EventBundle, llm: LlmProvider) -> AgentRun:
         model_version=getattr(llm, "model_name", "unknown"),
         prompt_version=PROMPT_VERSION,
     )
-

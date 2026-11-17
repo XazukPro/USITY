@@ -29,6 +29,11 @@ def migrate(url):
                     for column in inspect(conn).get_columns("review_drafts")
                 ):
                     statements = []
+                if path.stem == "007_assignment_cancellation" and any(
+                    column["name"] == "cancelled_at"
+                    for column in inspect(conn).get_columns("assignments")
+                ):
+                    statements = []
                 for statement in statements:
                     if statement.strip():
                         conn.exec_driver_sql(statement)

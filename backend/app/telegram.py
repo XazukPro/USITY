@@ -153,10 +153,12 @@ def queue_text_message(
         return False
     with Session(engine) as db, db.begin():
         integration = db.scalar(
-            select(TelegramIntegration).where(
+            select(TelegramIntegration)
+            .where(
                 TelegramIntegration.chat_id == chat_id,
                 TelegramIntegration.topic_id == topic_id,
-            ).with_for_update()
+            )
+            .with_for_update()
         )
         if integration is None:
             return False
@@ -195,7 +197,9 @@ def _ready_bundles(rows, cutoff):
         yield pending
 
 
-def process_ready_messages(engine, provider, model_version: str) -> list[str | None]:
+def process_ready_messages(
+    engine, provider, model_version: str, *, five_agents=False
+) -> list[str | None]:
     """Called by the bot worker; a failed model call leaves messages for retry."""
     cutoff = utc_now() - QUIET_PERIOD
     with Session(engine) as db:
@@ -252,9 +256,21 @@ def process_ready_messages(engine, provider, model_version: str) -> list[str | N
                     for row in chunk
                 ),
             )
-            draft_id = ingest_homework(
-                engine, event_id, integration.chat_id, bundle, provider, model_version
-            )
+            if five_agents:
+                from app.live_pipeline import process_bundle
+
+                draft_id = process_bundle(
+                    engine, integration, event_id, chunk, provider
+                )
+            else:
+                draft_id = ingest_homework(
+                    engine,
+                    event_id,
+                    integration.chat_id,
+                    bundle,
+                    provider,
+                    model_version,
+                )
             with Session(engine) as marking, marking.begin():
                 active = marking.get(TelegramIntegration, integration.group_id)
                 if (
