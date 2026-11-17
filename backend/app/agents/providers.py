@@ -150,7 +150,7 @@ class GigaChatProvider:
         self.expires_at = expires_at
         return token
 
-    def complete(self, system_prompt, event_json):
+    def complete(self, system_prompt, event_json, *, output_schema=None):
         body = {
             "model": self.model,
             "messages": [
@@ -159,7 +159,7 @@ class GigaChatProvider:
             ],
             "response_format": {
                 "type": "json_schema",
-                "schema": self.output_schema,
+                "schema": self.output_schema if output_schema is None else output_schema,
                 "strict": True,
             },
         }

@@ -25,6 +25,7 @@ from app.models import (
     LessonDetails,
     utc_now,
 )
+from app.proposal_review import install_proposal_review
 from app.schemas import CompletionInput, DecisionInput, LessonInput
 from app.telegram import ConnectionDenied, connection_status, issue_connect_code
 
@@ -58,6 +59,7 @@ def create_app(database_url, *, login_mail=None):
 
     Member = Annotated[object, Depends(current_member)]
     install_material_library(app, DB, Member)
+    install_proposal_review(app, DB, Member)
 
     @app.get("/me")
     def profile(db: DB, member: Member):
@@ -145,6 +147,43 @@ def create_app(database_url, *, login_mail=None):
     ):
         require_group(member, group_id, admin=True)
         status = "approved" if body.action == "approve" else "rejected"
+        current_draft = db.scalar(
+            select(Draft)
+            .where(Draft.id == draft_id, Draft.group_id == group_id)
+            .with_for_update()
+        )
+        summary = (
+            (current_draft.proposal_set or {}).get("summary") if current_draft else None
+        )
+        if body.action == "approve" and summary is not None:
+            if not summary.get("homework"):
+                raise HTTPException(422, "Это предложение не является новым ДЗ")
+            if any(
+                p.get("proposal_type")
+                in {"new_homework", "incomplete_homework", "schedule_binding"}
+                and p.get("decision", {}).get("status") == "rejected"
+                for run in current_draft.proposal_set.get("runs", [])
+                for p in run.get("proposals", [])
+            ):
+                raise HTTPException(
+                    422, "Предложение уже отклонено; создайте новый черновик"
+                )
+            if body.text in {
+                "Ожидается продолжение задания",
+                "Предложения требуют проверки",
+            }:
+                raise HTTPException(422, "Заполните содержание задания")
+            if any(
+                p.get("proposal_type")
+                in {"assignment_change", "material", "duplicate_conflict"}
+                and p.get("decision") is None
+                for run in current_draft.proposal_set.get("runs", [])
+                for p in run.get("proposals", [])
+            ):
+                raise HTTPException(
+                    422,
+                    "Сначала обработайте остальные предложения: материалы, изменения и дубли",
+                )
         result = db.execute(
             update(Draft)
             .where(
@@ -222,6 +261,7 @@ def create_app(database_url, *, login_mail=None):
         )
         query = select(Assignment, completed.label("completed")).where(
             Assignment.group_id == group_id,
+            Assignment.cancelled_at.is_(None),
             Assignment.lesson_id.in_(allowed_lessons(member)),
             audience_visible_to(member),
         )
@@ -249,6 +289,7 @@ def create_app(database_url, *, login_mail=None):
             .where(
                 Assignment.id == assignment_id,
                 Assignment.group_id == group_id,
+                Assignment.cancelled_at.is_(None),
                 Assignment.lesson_id.in_(allowed_lessons(member)),
                 audience_visible_to(member),
             )

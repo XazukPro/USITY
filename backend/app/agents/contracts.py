@@ -78,7 +78,8 @@ class AgentProposal:
     def validate(self, bundle: EventBundle) -> None:
         if not self.proposal_type or not self.reason.strip():
             raise ValueError("proposal type and reason are required")
-        if not self.source_ids or len(set(self.source_ids)) != len(self.source_ids):
+        if (not self.source_ids or any(type(source_id) is not int for source_id in self.source_ids)
+                or len(set(self.source_ids)) != len(self.source_ids)):
             raise ValueError("proposal must cite unique source IDs")
         if not set(self.source_ids).issubset(bundle.message_ids):
             raise ValueError("proposal cites unknown source IDs")

@@ -100,7 +100,11 @@ async def _process_loop(engine, provider, model_version):
     while True:
         try:
             await asyncio.to_thread(
-                process_ready_messages, engine, provider, model_version
+                process_ready_messages,
+                engine,
+                provider,
+                model_version,
+                five_agents=True,
             )
         except Exception:
             LOG.exception("Telegram inbox processing failed; will retry")
@@ -124,9 +128,7 @@ async def run():
     )
     dispatcher = Dispatcher()
     dispatcher.include_router(create_router(engine))
-    worker = asyncio.create_task(
-        _process_loop(engine, provider, provider.model)
-    )
+    worker = asyncio.create_task(_process_loop(engine, provider, provider.model))
     try:
         async with Bot(os.environ["USITY_TELEGRAM_BOT_TOKEN"]) as bot:
             await dispatcher.start_polling(bot, handle_as_tasks=False)

@@ -50,7 +50,18 @@ def build_default_agents(provider: object, now: str | datetime) -> tuple[Registe
     current = datetime.fromisoformat(now) if isinstance(now, str) else now
     if current.tzinfo is None:
         raise ValueError("now must include a timezone")
-    return tuple(_BoundAgent(agent_id, provider, current) for agent_id in AGENT_IDS)
+    from app.agents.gigachat_schemas import bind_gigachat_agent
+    from app.agents.providers import GigaChatProvider
+
+    return tuple(
+        _BoundAgent(
+            agent_id,
+            bind_gigachat_agent(provider, agent_id)
+            if isinstance(provider, GigaChatProvider) else provider,
+            current,
+        )
+        for agent_id in AGENT_IDS
+    )
 
 
 def run_all_agents(

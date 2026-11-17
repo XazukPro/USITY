@@ -135,6 +135,7 @@ class Assignment(Base):
     draft_id: Mapped[str] = mapped_column(ForeignKey("review_drafts.id"), unique=True)
     text: Mapped[str] = mapped_column(Text)
     version: Mapped[int] = mapped_column(Integer, default=1)
+    cancelled_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
 class AssignmentSubgroup(Base):
